@@ -119,37 +119,6 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &52549737
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 52549738}
-  m_Layer: 0
-  m_Name: RightClawTip
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &52549738
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 52549737}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -1.32, y: -1.17, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 596467605}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &87994331
 GameObject:
   m_ObjectHideFlags: 0
@@ -159,7 +128,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 87994332}
-  - component: {fileID: 87994333}
   - component: {fileID: 87994334}
   m_Layer: 0
   m_Name: Crab
@@ -182,35 +150,10 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1098857665}
-  - {fileID: 596467605}
   - {fileID: 1704346049}
-  - {fileID: 2021638608}
+  - {fileID: 1191771290}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &87994333
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 87994331}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ec396d86d27f88c46b4b48e432b24366, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: '::'
-  leftArm: {fileID: 1704346049}
-  rightArm: {fileID: 1098857665}
-  leftClaw: {fileID: 2021638608}
-  rightClaw: {fileID: 596467605}
-  armRotationSpeed: 360
-  armSpreadAngle: 15
-  armSmoothTime: 0.1
-  clawRotationSpeed: 720
-  clawMaxBend: 180
-  leftClawRotationOffset: -130
-  rightClawRotationOffset: 140
-  clawSmoothTime: 0.08
 --- !u!114 &87994334
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -502,37 +445,6 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
---- !u!1 &480326172
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 480326173}
-  m_Layer: 0
-  m_Name: LeftClawTip
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &480326173
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 480326172}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 1.24, y: -1.17, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 2021638608}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &519420028
 GameObject:
   m_ObjectHideFlags: 0
@@ -680,9 +592,10 @@ GameObject:
   m_Component:
   - component: {fileID: 596467605}
   - component: {fileID: 596467606}
-  - component: {fileID: 596467609}
   - component: {fileID: 596467608}
-  - component: {fileID: 596467607}
+  - component: {fileID: 596467609}
+  - component: {fileID: 596467610}
+  - component: {fileID: 596467611}
   m_Layer: 7
   m_Name: RightClaw
   m_TagString: Untagged
@@ -699,12 +612,11 @@ Transform:
   m_GameObject: {fileID: 596467604}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: 0.9990634, w: 0.043270785}
-  m_LocalPosition: {x: 2.697, y: 0.38200003, z: -1.45}
-  m_LocalScale: {x: 1.2891002, y: 1.2891002, z: 1.2891}
+  m_LocalPosition: {x: 1.68, y: -0.19, z: 0}
+  m_LocalScale: {x: 1.2891, y: 1.2891, z: 1.2891}
   m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 52549738}
-  m_Father: {fileID: 87994332}
+  m_Children: []
+  m_Father: {fileID: 1098857665}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 175.04}
 --- !u!212 &596467606
 SpriteRenderer:
@@ -765,32 +677,6 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
---- !u!233 &596467607
-HingeJoint2D:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 596467604}
-  m_Enabled: 1
-  serializedVersion: 4
-  m_EnableCollision: 0
-  m_ConnectedRigidBody: {fileID: 1098857669}
-  m_BreakForce: Infinity
-  m_BreakTorque: Infinity
-  m_BreakAction: 3
-  m_AutoConfigureConnectedAnchor: 1
-  m_Anchor: {x: 0, y: 0}
-  m_ConnectedAnchor: {x: 1.547, y: -0.22799999}
-  m_UseConnectedAnchor: 1
-  m_UseMotor: 0
-  m_Motor:
-    m_MotorSpeed: 0
-    m_MaximumMotorForce: 10000
-  m_UseLimits: 0
-  m_AngleLimits:
-    m_LowerAngle: -303.9
-    m_UpperAngle: -149.1
 --- !u!58 &596467608
 CircleCollider2D:
   m_ObjectHideFlags: 0
@@ -854,6 +740,54 @@ Rigidbody2D:
   m_SleepingMode: 1
   m_CollisionDetection: 1
   m_Constraints: 0
+--- !u!233 &596467610
+HingeJoint2D:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 596467604}
+  m_Enabled: 1
+  serializedVersion: 4
+  m_EnableCollision: 0
+  m_ConnectedRigidBody: {fileID: 1098857669}
+  m_BreakForce: Infinity
+  m_BreakTorque: Infinity
+  m_BreakAction: 3
+  m_AutoConfigureConnectedAnchor: 1
+  m_Anchor: {x: 0, y: 0}
+  m_ConnectedAnchor: {x: 1.68, y: -0.19}
+  m_UseConnectedAnchor: 1
+  m_UseMotor: 0
+  m_Motor:
+    m_MotorSpeed: 0
+    m_MaximumMotorForce: 10000
+  m_UseLimits: 0
+  m_AngleLimits:
+    m_LowerAngle: 0
+    m_UpperAngle: 359
+--- !u!114 &596467611
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 596467604}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d9600c8beebbdd54e9fa2bb40121f432, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HingeAim2D
+  autoConnectToParent: 1
+  allowAncestorFallback: 0
+  connectedBodyOverride: {fileID: 1098857669}
+  motorStrength: 120
+  maxMotorSpeed: 180
+  aimResponsiveness: 6
+  angularDamping: 0.35
+  stopDeadzone: 1.5
+  invert: 0
+  angleOffset: 0
 --- !u!1 &619394800
 GameObject:
   m_ObjectHideFlags: 0
@@ -1221,9 +1155,9 @@ GameObject:
   m_Component:
   - component: {fileID: 1098857665}
   - component: {fileID: 1098857666}
-  - component: {fileID: 1098857667}
   - component: {fileID: 1098857669}
   - component: {fileID: 1098857668}
+  - component: {fileID: 1098857670}
   m_Layer: 8
   m_Name: RightArm
   m_TagString: Untagged
@@ -1243,7 +1177,8 @@ Transform:
   m_LocalPosition: {x: 1.15, y: 0.61, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 596467605}
   m_Father: {fileID: 87994332}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!212 &1098857666
@@ -1305,21 +1240,6 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
---- !u!114 &1098857667
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1098857664}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d9600c8beebbdd54e9fa2bb40121f432, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: '::'
-  motorStrength: 10
-  maxMotorSpeed: 10
-  invert: 0
 --- !u!233 &1098857668
 HingeJoint2D:
   m_ObjectHideFlags: 0
@@ -1338,7 +1258,7 @@ HingeJoint2D:
   m_Anchor: {x: 0, y: 0}
   m_ConnectedAnchor: {x: 1.1499996, y: 0.60999984}
   m_UseConnectedAnchor: 1
-  m_UseMotor: 0
+  m_UseMotor: 1
   m_Motor:
     m_MotorSpeed: 0
     m_MaximumMotorForce: 10000
@@ -1361,7 +1281,7 @@ Rigidbody2D:
   m_Mass: 0.0004
   m_LinearDamping: 1
   m_AngularDamping: 8
-  m_GravityScale: 1
+  m_GravityScale: 0
   m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
@@ -1373,6 +1293,28 @@ Rigidbody2D:
   m_SleepingMode: 1
   m_CollisionDetection: 0
   m_Constraints: 0
+--- !u!114 &1098857670
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1098857664}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d9600c8beebbdd54e9fa2bb40121f432, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HingeAim2D
+  autoConnectToParent: 1
+  allowAncestorFallback: 0
+  connectedBodyOverride: {fileID: 1191771293}
+  motorStrength: 120
+  maxMotorSpeed: 180
+  aimResponsiveness: 6
+  angularDamping: 0.35
+  stopDeadzone: 1.5
+  invert: 1
+  angleOffset: 0
 --- !u!1 &1191771289
 GameObject:
   m_ObjectHideFlags: 0
@@ -1402,8 +1344,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1191771289}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: 0, z: -0.99284, w: -0.119452044}
-  m_LocalPosition: {x: -2.6323333, y: 1.0235829, z: 0}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -1416,7 +1358,7 @@ Transform:
   - {fileID: 335234085}
   - {fileID: 2042082060}
   - {fileID: 1701763746}
-  m_Father: {fileID: 2021638608}
+  m_Father: {fileID: 87994332}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!212 &1191771291
 SpriteRenderer:
@@ -1526,10 +1468,10 @@ Rigidbody2D:
   m_Simulated: 1
   m_UseFullKinematicContacts: 0
   m_UseAutoMass: 0
-  m_Mass: 2
-  m_LinearDamping: 0
-  m_AngularDamping: 0.05
-  m_GravityScale: 1
+  m_Mass: 200
+  m_LinearDamping: 8
+  m_AngularDamping: 1
+  m_GravityScale: 5
   m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
@@ -1537,7 +1479,7 @@ Rigidbody2D:
   m_ExcludeLayers:
     serializedVersion: 2
     m_Bits: 0
-  m_Interpolate: 0
+  m_Interpolate: 1
   m_SleepingMode: 1
   m_CollisionDetection: 0
   m_Constraints: 0
@@ -1829,7 +1771,8 @@ Transform:
   m_LocalPosition: {x: -1.3, y: 0.61, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 2021638608}
   m_Father: {fileID: 87994332}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!212 &1704346050
@@ -1903,9 +1846,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d9600c8beebbdd54e9fa2bb40121f432, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HingeAim2D
-  motorStrength: 10
-  maxMotorSpeed: 10
+  autoConnectToParent: 1
+  allowAncestorFallback: 0
+  connectedBodyOverride: {fileID: 1191771293}
+  motorStrength: 120
+  maxMotorSpeed: 180
+  aimResponsiveness: 6
+  angularDamping: 0.35
+  stopDeadzone: 1.5
   invert: 0
+  angleOffset: 0
 --- !u!233 &1704346052
 HingeJoint2D:
   m_ObjectHideFlags: 0
@@ -1924,7 +1874,7 @@ HingeJoint2D:
   m_Anchor: {x: 0, y: 0}
   m_ConnectedAnchor: {x: -1.3000001, y: 0.60999984}
   m_UseConnectedAnchor: 1
-  m_UseMotor: 0
+  m_UseMotor: 1
   m_Motor:
     m_MotorSpeed: 0
     m_MaximumMotorForce: 10000
@@ -1947,7 +1897,7 @@ Rigidbody2D:
   m_Mass: 0.0004
   m_LinearDamping: 1
   m_AngularDamping: 8
-  m_GravityScale: 1
+  m_GravityScale: 0
   m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
@@ -1969,9 +1919,10 @@ GameObject:
   m_Component:
   - component: {fileID: 2021638608}
   - component: {fileID: 2021638609}
-  - component: {fileID: 2021638612}
   - component: {fileID: 2021638611}
-  - component: {fileID: 2021638610}
+  - component: {fileID: 2021638612}
+  - component: {fileID: 2021638613}
+  - component: {fileID: 2021638614}
   m_Layer: 7
   m_Name: LeftClaw
   m_TagString: Untagged
@@ -1988,13 +1939,11 @@ Transform:
   m_GameObject: {fileID: 2021638607}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: 0.99284, w: -0.119452044}
-  m_LocalPosition: {x: -2.8, y: 0.37, z: 0}
+  m_LocalPosition: {x: -1.5, y: -0.24000001, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 480326173}
-  - {fileID: 1191771290}
-  m_Father: {fileID: 87994332}
+  m_Children: []
+  m_Father: {fileID: 1704346049}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 193.721}
 --- !u!212 &2021638609
 SpriteRenderer:
@@ -2043,7 +1992,7 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 1
+  m_SortingOrder: 0
   m_MaskInteraction: 0
   m_Sprite: {fileID: 2212274630057595952, guid: d71474def60f1ec448fc442aabbae55a, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -2055,32 +2004,6 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
---- !u!233 &2021638610
-HingeJoint2D:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2021638607}
-  m_Enabled: 1
-  serializedVersion: 4
-  m_EnableCollision: 0
-  m_ConnectedRigidBody: {fileID: 1704346053}
-  m_BreakForce: Infinity
-  m_BreakTorque: Infinity
-  m_BreakAction: 3
-  m_AutoConfigureConnectedAnchor: 0
-  m_Anchor: {x: 0, y: 0}
-  m_ConnectedAnchor: {x: -1.5, y: -0.24000001}
-  m_UseConnectedAnchor: 1
-  m_UseMotor: 0
-  m_Motor:
-    m_MotorSpeed: 0
-    m_MaximumMotorForce: 10000
-  m_UseLimits: 1
-  m_AngleLimits:
-    m_LowerAngle: -36.13
-    m_UpperAngle: 110.1
 --- !u!58 &2021638611
 CircleCollider2D:
   m_ObjectHideFlags: 0
@@ -2144,6 +2067,54 @@ Rigidbody2D:
   m_SleepingMode: 1
   m_CollisionDetection: 1
   m_Constraints: 0
+--- !u!233 &2021638613
+HingeJoint2D:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2021638607}
+  m_Enabled: 1
+  serializedVersion: 4
+  m_EnableCollision: 0
+  m_ConnectedRigidBody: {fileID: 1704346053}
+  m_BreakForce: Infinity
+  m_BreakTorque: Infinity
+  m_BreakAction: 3
+  m_AutoConfigureConnectedAnchor: 1
+  m_Anchor: {x: 0, y: 0}
+  m_ConnectedAnchor: {x: -1.5, y: -0.24000001}
+  m_UseConnectedAnchor: 1
+  m_UseMotor: 0
+  m_Motor:
+    m_MotorSpeed: 0
+    m_MaximumMotorForce: 10000
+  m_UseLimits: 0
+  m_AngleLimits:
+    m_LowerAngle: 0
+    m_UpperAngle: 359
+--- !u!114 &2021638614
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2021638607}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d9600c8beebbdd54e9fa2bb40121f432, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HingeAim2D
+  autoConnectToParent: 1
+  allowAncestorFallback: 0
+  connectedBodyOverride: {fileID: 1704346053}
+  motorStrength: 120
+  maxMotorSpeed: 180
+  aimResponsiveness: 6
+  angularDamping: 0.35
+  stopDeadzone: 1.5
+  invert: 0
+  angleOffset: 180
 --- !u!1 &2027718025
 GameObject:
   m_ObjectHideFlags: 0
@@ -2171,7 +2142,7 @@ Transform:
   m_GameObject: {fileID: 2027718025}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.11559, y: -2.44, z: 0}
+  m_LocalPosition: {x: 0.125, y: -2.46, z: 0}
   m_LocalScale: {x: 2.160919, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -2270,7 +2241,7 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 0
+  m_SortingOrder: -100
   m_MaskInteraction: 0
   m_Sprite: {fileID: 7482667652216324306, guid: 311925a002f4447b3a28927169b83ea6, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
