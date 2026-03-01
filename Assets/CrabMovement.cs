@@ -3,11 +3,12 @@ using UnityEngine.InputSystem;
 
 public class CrabMovement : MonoBehaviour
 {
-    [Header("Movement")]
     [SerializeField] float moveSpeed = 5f;
 
     Rigidbody2D rb;
     Vector2 moveInput;
+
+    ContactPoint2D[] contacts = new ContactPoint2D[8];
 
     void Awake()
     {
@@ -21,6 +22,23 @@ public class CrabMovement : MonoBehaviour
 
     void FixedUpdate()
     {
-        rb.linearVelocity = new Vector2(moveInput.x * moveSpeed, rb.linearVelocity.y);
+        if (!IsGrounded())
+            return;
+
+        rb.linearVelocity =
+            new Vector2(moveInput.x * moveSpeed, rb.linearVelocity.y);
+    }
+
+    bool IsGrounded()
+    {
+        int count = rb.GetContacts(contacts);
+
+        for (int i = 0; i < count; i++)
+        {
+            if (contacts[i].normal.y > 0.5f)
+                return true;
+        }
+
+        return false;
     }
 }
