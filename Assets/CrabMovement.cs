@@ -3,42 +3,37 @@ using UnityEngine.InputSystem;
 
 public class CrabMovement : MonoBehaviour
 {
-    [SerializeField] float moveSpeed = 5f;
+    [SerializeField] float walkSpeed = 6f;
 
     Rigidbody2D rb;
-    Vector2 moveInput;
-
-    ContactPoint2D[] contacts = new ContactPoint2D[8];
+    ClawGrab2D grab;
 
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
-    }
-
-    void OnMove(InputValue value)
-    {
-        moveInput = value.Get<Vector2>();
+        grab = GetComponentInParent<ClawGrab2D>();
     }
 
     void FixedUpdate()
     {
-        if (!IsGrounded())
-            return;
+        if (Gamepad.current == null) return;
 
-        rb.linearVelocity =
-            new Vector2(moveInput.x * moveSpeed, rb.linearVelocity.y);
-    }
-
-    bool IsGrounded()
-    {
-        int count = rb.GetContacts(contacts);
-
-        for (int i = 0; i < count; i++)
+        if (grab != null && grab.AnyClamped)
         {
-            if (contacts[i].normal.y > 0.5f)
-                return true;
+            rb.linearVelocity =
+                new Vector2(0f, rb.linearVelocity.y);
+            return;
         }
 
-        return false;
+        float move = 0f;
+
+        if (Gamepad.current.leftShoulder.isPressed)
+            move = -1f;
+
+        if (Gamepad.current.rightShoulder.isPressed)
+            move = 1f;
+
+        rb.linearVelocity =
+            new Vector2(move * walkSpeed, rb.linearVelocity.y);
     }
 }

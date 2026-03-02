@@ -171,7 +171,7 @@ MonoBehaviour:
   grabbableLayers:
     serializedVersion: 2
     m_Bits: 64
-  grabRadius: 0.5
+  grabRadius: 2
 --- !u!1 &139302735
 GameObject:
   m_ObjectHideFlags: 0
@@ -610,8 +610,8 @@ Transform:
   m_GameObject: {fileID: 612381144}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -1.375, y: -1.235, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalPosition: {x: -1.198, y: -1.003, z: 0}
+  m_LocalScale: {x: 3.38, y: 3.69, z: 2.6}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1271251921}
@@ -831,7 +831,7 @@ Transform:
   m_GameObject: {fileID: 902615766}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 1.35, y: -1.31, z: 0}
+  m_LocalPosition: {x: 1.16, y: -0.96, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1149,10 +1149,10 @@ HingeJoint2D:
   m_Motor:
     m_MotorSpeed: 0
     m_MaximumMotorForce: 10000
-  m_UseLimits: 0
+  m_UseLimits: 1
   m_AngleLimits:
-    m_LowerAngle: 205.92
-    m_UpperAngle: 428.08
+    m_LowerAngle: -100
+    m_UpperAngle: 100
 --- !u!50 &1098857669
 Rigidbody2D:
   serializedVersion: 5
@@ -1167,7 +1167,7 @@ Rigidbody2D:
   m_UseAutoMass: 0
   m_Mass: 2
   m_LinearDamping: 0
-  m_AngularDamping: 50
+  m_AngularDamping: 5
   m_GravityScale: 0
   m_Material: {fileID: 0}
   m_IncludeLayers:
@@ -1333,7 +1333,7 @@ Rigidbody2D:
   m_Simulated: 1
   m_UseFullKinematicContacts: 0
   m_UseAutoMass: 0
-  m_Mass: 15
+  m_Mass: 4
   m_LinearDamping: 1
   m_AngularDamping: 5
   m_GravityScale: 1
@@ -1360,7 +1360,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe2036bfec4903f48be291bafe15ddec, type: 3}
   m_Name: 
   m_EditorClassIdentifier: '::'
-  moveSpeed: 5
+  walkSpeed: 6
 --- !u!114 &1191771295
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1440,13 +1440,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d9600c8beebbdd54e9fa2bb40121f432, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HingeAim2D
-  torqueStrength: 5
+  torqueStrength: 10
   damping: 1
-  pullStrength: 60
+  pullStrength: 100
   liftMultiplier: 50
-  maxPullForce: 10
-  angleOffset: 180
+  maxPullForce: 100
+  idleDirection: {x: 160, y: -1}
+  idleStrength: 4
+  angleOffset: 195
   invert: 0
+  stickSide: 1
 --- !u!233 &1271251923
 HingeJoint2D:
   m_ObjectHideFlags: 0
@@ -1471,8 +1474,8 @@ HingeJoint2D:
     m_MaximumMotorForce: 10000
   m_UseLimits: 0
   m_AngleLimits:
-    m_LowerAngle: -309.3
-    m_UpperAngle: -131.8
+    m_LowerAngle: 93.21
+    m_UpperAngle: 223.7
 --- !u!50 &1271251924
 Rigidbody2D:
   serializedVersion: 5
@@ -1487,7 +1490,7 @@ Rigidbody2D:
   m_UseAutoMass: 0
   m_Mass: 0.6
   m_LinearDamping: 0
-  m_AngularDamping: 5
+  m_AngularDamping: 2
   m_GravityScale: 0
   m_Material: {fileID: 0}
   m_IncludeLayers:
@@ -1835,14 +1838,14 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1704346048}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0.013787694, w: 0.999905}
   m_LocalPosition: {x: -1.3, y: 0.61, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1715695857}
   m_Father: {fileID: 87994332}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 1.58}
 --- !u!212 &1704346050
 SpriteRenderer:
   serializedVersion: 2
@@ -1924,10 +1927,10 @@ HingeJoint2D:
   m_Motor:
     m_MotorSpeed: 0
     m_MaximumMotorForce: 10000
-  m_UseLimits: 0
+  m_UseLimits: 1
   m_AngleLimits:
-    m_LowerAngle: 126.3
-    m_UpperAngle: 306.7
+    m_LowerAngle: -45
+    m_UpperAngle: 120
 --- !u!50 &1704346053
 Rigidbody2D:
   serializedVersion: 5
@@ -1942,7 +1945,7 @@ Rigidbody2D:
   m_UseAutoMass: 0
   m_Mass: 2
   m_LinearDamping: 0
-  m_AngularDamping: 50
+  m_AngularDamping: 5
   m_GravityScale: 0
   m_Material: {fileID: 0}
   m_IncludeLayers:
@@ -2004,13 +2007,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d9600c8beebbdd54e9fa2bb40121f432, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HingeAim2D
-  torqueStrength: 5
+  torqueStrength: 10
   damping: 1
-  pullStrength: 60
+  pullStrength: 100
   liftMultiplier: 50
-  maxPullForce: 10
-  angleOffset: 0
+  maxPullForce: 100
+  idleDirection: {x: -12, y: -1}
+  idleStrength: 4
+  angleOffset: -24
   invert: 0
+  stickSide: 0
 --- !u!233 &1715695859
 HingeJoint2D:
   m_ObjectHideFlags: 0
@@ -2027,7 +2033,7 @@ HingeJoint2D:
   m_BreakAction: 3
   m_AutoConfigureConnectedAnchor: 1
   m_Anchor: {x: 0, y: 0}
-  m_ConnectedAnchor: {x: -1.5, y: -0.23999977}
+  m_ConnectedAnchor: {x: -1.5000002, y: -0.24}
   m_UseConnectedAnchor: 1
   m_UseMotor: 0
   m_Motor:
@@ -2035,8 +2041,8 @@ HingeJoint2D:
     m_MaximumMotorForce: 10000
   m_UseLimits: 0
   m_AngleLimits:
-    m_LowerAngle: 300.6
-    m_UpperAngle: 479.4
+    m_LowerAngle: 113.8
+    m_UpperAngle: -52.5
 --- !u!50 &1715695860
 Rigidbody2D:
   serializedVersion: 5
@@ -2051,7 +2057,7 @@ Rigidbody2D:
   m_UseAutoMass: 0
   m_Mass: 0.6
   m_LinearDamping: 0
-  m_AngularDamping: 5
+  m_AngularDamping: 2
   m_GravityScale: 0
   m_Material: {fileID: 0}
   m_IncludeLayers:

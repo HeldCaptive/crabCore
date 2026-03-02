@@ -4,41 +4,64 @@ using UnityEngine.InputSystem;
 [RequireComponent(typeof(Rigidbody2D), typeof(HingeJoint2D))]
 public class ClawTorqueAim : MonoBehaviour
 {
+    public enum StickSide
+    {
+        Left,
+        Right
+    }
+
     public float torqueStrength = 8f;
     public float damping = 6f;
 
-    public float pullStrength = 12f;
-    public float liftMultiplier = 3f;
-    public float maxPullForce = 50f;
+    public float pullStrength = 10f;
+    public float liftMultiplier = 3f;   // restored
+    public float maxPullForce = 40f;
+
+    [Header("Idle")]
+    public Vector2 idleDirection = Vector2.down;
+    public float idleStrength = 4f;
 
     public float angleOffset = 0f;
     public bool invert = false;
 
+    [Header("Input")]
+    public StickSide stickSide = StickSide.Right;
+
     Rigidbody2D rb;
     HingeJoint2D hinge;
-    Camera cam;
     ClawGrab2D grab;
+
+    Vector2 aimInput;
 
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
         hinge = GetComponent<HingeJoint2D>();
-        cam = Camera.main;
         grab = GetComponentInParent<ClawGrab2D>();
+    }
+
+    void Update()
+    {
+        if (Gamepad.current == null)
+        {
+            aimInput = Vector2.zero;
+            return;
+        }
+
+        if (stickSide == StickSide.Left)
+            aimInput = Gamepad.current.leftStick.ReadValue();
+        else
+            aimInput = Gamepad.current.rightStick.ReadValue();
     }
 
     void FixedUpdate()
     {
-        if (Mouse.current == null || cam == null) return;
+        Vector2 dir;
 
-        Vector2 mouse =
-            cam.ScreenToWorldPoint(Mouse.current.position.ReadValue());
-
-        Vector2 pivot =
-            hinge.connectedBody.transform.TransformPoint(hinge.connectedAnchor);
-
-        Vector2 dir = mouse - pivot;
-        if (dir.sqrMagnitude < 0.001f) return;
+        if (aimInput.sqrMagnitude < 0.05f)
+            dir = idleDirection.normalized;
+        else
+            dir = aimInput.normalized;
 
         float targetAngle =
             Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg + angleOffset;
@@ -57,16 +80,18 @@ public class ClawTorqueAim : MonoBehaviour
         // Only free claw pulls
         if (GetComponent<FixedJoint2D>() == null)
         {
-            float strength = pullStrength;
+            float strength;
+
+            if (aimInput.sqrMagnitude < 0.05f)
+                strength = idleStrength;
+            else
+                strength = pullStrength;
 
             if (grab != null && grab.AnyClamped)
                 strength *= liftMultiplier;
 
-            Vector2 pullDir =
-                (mouse - rb.position).normalized;
-
             Vector2 pull =
-                Vector2.ClampMagnitude(pullDir * strength, maxPullForce);
+                Vector2.ClampMagnitude(dir * strength, maxPullForce);
 
             rb.AddForce(pull);
         }
