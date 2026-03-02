@@ -1442,7 +1442,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::HingeAim2D
   torqueStrength: 10
   damping: 1
-  pullStrength: 100
+  pullStrength: 40
   liftMultiplier: 50
   maxPullForce: 100
   idleDirection: {x: 160, y: -1}
@@ -2009,7 +2009,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::HingeAim2D
   torqueStrength: 10
   damping: 1
-  pullStrength: 100
+  pullStrength: 40
   liftMultiplier: 50
   maxPullForce: 100
   idleDirection: {x: -12, y: -1}
