@@ -6,9 +6,6 @@ public class ClawGrab2D : MonoBehaviour
     [SerializeField] Rigidbody2D leftClaw;
     [SerializeField] Rigidbody2D rightClaw;
 
-    [SerializeField] Collider2D leftClawCollider;
-    [SerializeField] Collider2D rightClawCollider;
-
     [SerializeField] LayerMask grabbableLayers;
     [SerializeField] float grabRadius = 0.2f;
 
@@ -19,30 +16,28 @@ public class ClawGrab2D : MonoBehaviour
 
     void Update()
     {
-        if (Mouse.current == null) return;
+        if (Gamepad.current == null) return;
 
-        if (Mouse.current.leftButton.wasPressedThisFrame)
-            TryGrab(leftClaw, leftClawCollider, ref leftJoint);
+        float leftTrigger = Gamepad.current.leftTrigger.ReadValue();
+        float rightTrigger = Gamepad.current.rightTrigger.ReadValue();
 
-        if (Mouse.current.leftButton.wasReleasedThisFrame)
+        if (leftTrigger > 0.5f)
+            TryGrab(leftClaw, ref leftJoint);
+        else
             Release(ref leftJoint);
 
-        if (Mouse.current.rightButton.wasPressedThisFrame)
-            TryGrab(rightClaw, rightClawCollider, ref rightJoint);
-
-        if (Mouse.current.rightButton.wasReleasedThisFrame)
+        if (rightTrigger > 0.5f)
+            TryGrab(rightClaw, ref rightJoint);
+        else
             Release(ref rightJoint);
     }
 
-    void TryGrab(Rigidbody2D claw, Collider2D col, ref FixedJoint2D joint)
+    void TryGrab(Rigidbody2D claw, ref FixedJoint2D joint)
     {
-        if (claw == null || col == null || joint != null) return;
-
-        // Use collider bounds edge instead of center
-        Vector2 tipPoint = col.bounds.center + (Vector3)(claw.transform.right * col.bounds.extents.x);
+        if (claw == null || joint != null) return;
 
         Collider2D hit =
-            Physics2D.OverlapCircle(tipPoint, grabRadius, grabbableLayers);
+            Physics2D.OverlapCircle(claw.position, grabRadius, grabbableLayers);
 
         if (hit == null) return;
 
@@ -62,28 +57,5 @@ public class ClawGrab2D : MonoBehaviour
         if (joint == null) return;
         Destroy(joint);
         joint = null;
-    }
-
-    void OnDrawGizmosSelected()
-    {
-        if (leftClawCollider != null)
-        {
-            Vector2 tip =
-                leftClawCollider.bounds.center +
-                (Vector3)(leftClaw.transform.right * leftClawCollider.bounds.extents.x);
-
-            Gizmos.color = Color.red;
-            Gizmos.DrawWireSphere(tip, grabRadius);
-        }
-
-        if (rightClawCollider != null)
-        {
-            Vector2 tip =
-                rightClawCollider.bounds.center +
-                (Vector3)(rightClaw.transform.right * rightClawCollider.bounds.extents.x);
-
-            Gizmos.color = Color.blue;
-            Gizmos.DrawWireSphere(tip, grabRadius);
-        }
     }
 }
