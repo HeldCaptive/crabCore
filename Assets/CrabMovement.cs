@@ -3,7 +3,9 @@ using UnityEngine.InputSystem;
 
 public class CrabMovement : MonoBehaviour
 {
-    [SerializeField] float walkSpeed = 6f;
+    [SerializeField] float maxMoveSpeed = 6f;
+    [SerializeField] float acceleration = 30f;
+    [SerializeField] float deceleration = 8f;
 
     Rigidbody2D rb;
     ClawGrab2D grab;
@@ -19,11 +21,7 @@ public class CrabMovement : MonoBehaviour
         if (Gamepad.current == null) return;
 
         if (grab != null && grab.AnyClamped)
-        {
-            rb.linearVelocity =
-                new Vector2(0f, rb.linearVelocity.y);
             return;
-        }
 
         float move = 0f;
 
@@ -33,7 +31,17 @@ public class CrabMovement : MonoBehaviour
         if (Gamepad.current.rightShoulder.isPressed)
             move = 1f;
 
+        float targetSpeed = move * maxMoveSpeed;
+        float rate = Mathf.Abs(move) > 0.01f
+            ? acceleration
+            : deceleration;
+
+        float nextX = Mathf.MoveTowards(
+            rb.linearVelocity.x,
+            targetSpeed,
+            rate * Time.fixedDeltaTime);
+
         rb.linearVelocity =
-            new Vector2(move * walkSpeed, rb.linearVelocity.y);
+            new Vector2(nextX, rb.linearVelocity.y);
     }
 }
