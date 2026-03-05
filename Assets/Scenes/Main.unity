@@ -172,6 +172,10 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 64
   grabRadius: 2
+  jointFrequency: 30
+  jointDampingRatio: 2
+  clawLinearDamping: 10
+  clawAngularDamping: 10
 --- !u!1 &139302735
 GameObject:
   m_ObjectHideFlags: 0
@@ -1166,9 +1170,9 @@ Rigidbody2D:
   m_Simulated: 1
   m_UseFullKinematicContacts: 0
   m_UseAutoMass: 0
-  m_Mass: 2
-  m_LinearDamping: 0
-  m_AngularDamping: 5
+  m_Mass: 4
+  m_LinearDamping: 2
+  m_AngularDamping: 2
   m_GravityScale: 0
   m_Material: {fileID: 0}
   m_IncludeLayers:
@@ -1445,9 +1449,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::HingeAim2D
   torqueStrength: 5
   damping: 1
-  pullStrength: 20
-  liftMultiplier: 30
-  maxPullForce: 100
+  pullStrength: 30
+  liftMultiplier: 80
+  maxPullForce: 200
   idleDirection: {x: 160, y: -1}
   idleStrength: 4
   angleOffset: 195
@@ -1491,8 +1495,8 @@ Rigidbody2D:
   m_Simulated: 1
   m_UseFullKinematicContacts: 0
   m_UseAutoMass: 0
-  m_Mass: 0.6
-  m_LinearDamping: 0
+  m_Mass: 2
+  m_LinearDamping: 2
   m_AngularDamping: 2
   m_GravityScale: 0
   m_Material: {fileID: 0}
@@ -1946,9 +1950,9 @@ Rigidbody2D:
   m_Simulated: 1
   m_UseFullKinematicContacts: 0
   m_UseAutoMass: 0
-  m_Mass: 2
-  m_LinearDamping: 0
-  m_AngularDamping: 5
+  m_Mass: 4
+  m_LinearDamping: 2
+  m_AngularDamping: 2
   m_GravityScale: 0
   m_Material: {fileID: 0}
   m_IncludeLayers:
@@ -2012,9 +2016,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::HingeAim2D
   torqueStrength: 5
   damping: 1
-  pullStrength: 20
-  liftMultiplier: 30
-  maxPullForce: 100
+  pullStrength: 30
+  liftMultiplier: 80
+  maxPullForce: 200
   idleDirection: {x: -12, y: -1}
   idleStrength: 4
   angleOffset: -24
@@ -2058,8 +2062,8 @@ Rigidbody2D:
   m_Simulated: 1
   m_UseFullKinematicContacts: 0
   m_UseAutoMass: 0
-  m_Mass: 0.6
-  m_LinearDamping: 0
+  m_Mass: 2
+  m_LinearDamping: 2
   m_AngularDamping: 2
   m_GravityScale: 0
   m_Material: {fileID: 0}
