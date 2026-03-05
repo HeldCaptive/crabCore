@@ -15,15 +15,26 @@ public class ClawGrab2D : MonoBehaviour
 
     FixedJoint2D leftJoint;
     FixedJoint2D rightJoint;
+    CrabPlayerInput playerInput;
 
     public bool AnyClamped => leftJoint != null || rightJoint != null;
 
+    void Awake()
+    {
+        playerInput = GetComponentInParent<CrabPlayerInput>();
+    }
+
     void Update()
     {
-        if (Gamepad.current == null) return;
+        if (playerInput == null)
+            return;
 
-        float leftTrigger = Gamepad.current.leftTrigger.ReadValue();
-        float rightTrigger = Gamepad.current.rightTrigger.ReadValue();
+        Gamepad gamepad = playerInput.AssignedGamepad;
+
+        if (gamepad == null) return;
+
+        float leftTrigger = gamepad.leftTrigger.ReadValue();
+        float rightTrigger = gamepad.rightTrigger.ReadValue();
 
         if (leftTrigger > 0.5f)
             TryGrab(leftClaw, ref leftJoint);

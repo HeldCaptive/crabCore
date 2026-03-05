@@ -30,6 +30,7 @@ public class ClawTorqueAim : MonoBehaviour
     Rigidbody2D rb;
     HingeJoint2D hinge;
     ClawGrab2D grab;
+    CrabPlayerInput playerInput;
 
     Vector2 aimInput;
 
@@ -38,20 +39,29 @@ public class ClawTorqueAim : MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
         hinge = GetComponent<HingeJoint2D>();
         grab = GetComponentInParent<ClawGrab2D>();
+        playerInput = GetComponentInParent<CrabPlayerInput>();
     }
 
     void Update()
     {
-        if (Gamepad.current == null)
+        if (playerInput == null)
+        {
+            aimInput = Vector2.zero;
+            return;
+        }
+
+        Gamepad gamepad = playerInput.AssignedGamepad;
+
+        if (gamepad == null)
         {
             aimInput = Vector2.zero;
             return;
         }
 
         if (stickSide == StickSide.Left)
-            aimInput = Gamepad.current.leftStick.ReadValue();
+            aimInput = gamepad.leftStick.ReadValue();
         else
-            aimInput = Gamepad.current.rightStick.ReadValue();
+            aimInput = gamepad.rightStick.ReadValue();
     }
 
     void FixedUpdate()

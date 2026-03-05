@@ -9,26 +9,33 @@ public class CrabMovement : MonoBehaviour
 
     Rigidbody2D rb;
     ClawGrab2D grab;
+    CrabPlayerInput playerInput;
 
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
         grab = GetComponentInParent<ClawGrab2D>();
+        playerInput = GetComponentInParent<CrabPlayerInput>();
     }
 
     void FixedUpdate()
     {
-        if (Gamepad.current == null) return;
+        if (playerInput == null)
+            return;
+
+        Gamepad gamepad = playerInput.AssignedGamepad;
+
+        if (gamepad == null) return;
 
         if (grab != null && grab.AnyClamped)
             return;
 
         float move = 0f;
 
-        if (Gamepad.current.leftShoulder.isPressed)
+        if (gamepad.leftShoulder.isPressed)
             move = -1f;
 
-        if (Gamepad.current.rightShoulder.isPressed)
+        if (gamepad.rightShoulder.isPressed)
             move = 1f;
 
         float targetSpeed = move * maxMoveSpeed;
