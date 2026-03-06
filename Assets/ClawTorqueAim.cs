@@ -44,13 +44,9 @@ public class ClawTorqueAim : MonoBehaviour
 
     void Update()
     {
-        if (playerInput == null)
-        {
-            aimInput = Vector2.zero;
-            return;
-        }
-
-        Gamepad gamepad = playerInput.AssignedGamepad;
+        Gamepad gamepad = playerInput != null
+            ? playerInput.AssignedGamepad
+            : null;
 
         if (gamepad == null)
         {

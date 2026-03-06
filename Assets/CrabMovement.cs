@@ -20,10 +20,9 @@ public class CrabMovement : MonoBehaviour
 
     void FixedUpdate()
     {
-        if (playerInput == null)
-            return;
-
-        Gamepad gamepad = playerInput.AssignedGamepad;
+        Gamepad gamepad = playerInput != null
+            ? playerInput.AssignedGamepad
+            : null;
 
         if (gamepad == null) return;
 

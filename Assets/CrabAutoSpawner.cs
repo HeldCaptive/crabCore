@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -9,6 +10,8 @@ public class CrabAutoSpawner : MonoBehaviour
     [SerializeField] bool includeSceneCrabs = true;
     [SerializeField] bool disableExtraSceneCrabs = true;
     [SerializeField] bool hotPlugSupport = true;
+    [SerializeField] bool runDuringOnlineSession = false;
+    [SerializeField] bool spawnOnJoinButton = true;
 
     [Header("Spawn")]
     [SerializeField] Transform[] spawnPoints;
@@ -16,6 +19,7 @@ public class CrabAutoSpawner : MonoBehaviour
     [SerializeField] float fallbackSpacing = 3f;
 
     readonly List<CrabPlayerInput> managedCrabs = new List<CrabPlayerInput>();
+    readonly Dictionary<int, CrabPlayerInput> joinedCrabsByIndex = new Dictionary<int, CrabPlayerInput>();
     int lastKnownGamepadCount = -1;
     bool pendingResync;
 
@@ -36,11 +40,33 @@ public class CrabAutoSpawner : MonoBehaviour
 
     void Start()
     {
+        if (!CanRunSpawner())
+            return;
+
+        if (spawnOnJoinButton)
+        {
+            lastKnownGamepadCount = Gamepad.all.Count;
+
+            if (disableExtraSceneCrabs)
+                SetManagedCrabsActive(false);
+
+            return;
+        }
+
         SyncCrabsToConnectedGamepads();
     }
 
     void Update()
     {
+        if (!CanRunSpawner())
+            return;
+
+        if (spawnOnJoinButton)
+        {
+            ProcessJoinMode();
+            return;
+        }
+
         if (!hotPlugSupport)
             return;
 
@@ -53,6 +79,9 @@ public class CrabAutoSpawner : MonoBehaviour
 
     public void SyncCrabsToConnectedGamepads()
     {
+        if (spawnOnJoinButton)
+            return;
+
         managedCrabs.RemoveAll(c => c == null);
 
         int targetPlayers = Mathf.Min(Gamepad.all.Count, maxPlayers);
@@ -79,6 +108,7 @@ public class CrabAutoSpawner : MonoBehaviour
                 Quaternion spawnRotation = crabPrefab.transform.rotation;
 
                 crab = Instantiate(crabPrefab, spawnPosition, spawnRotation);
+                crab.GetComponent<NetworkObject>().Spawn();
                 managedCrabs.Add(crab);
             }
 
@@ -98,11 +128,10 @@ public class CrabAutoSpawner : MonoBehaviour
     void RebuildManagedCrabList()
     {
         managedCrabs.Clear();
+        joinedCrabsByIndex.Clear();
 
         if (!includeSceneCrabs)
             return;
-
-        EnsureSceneCrabsHavePlayerInput();
 
         CrabPlayerInput[] sceneCrabs = FindObjectsByType<CrabPlayerInput>(
             FindObjectsInactive.Include,
@@ -122,30 +151,120 @@ public class CrabAutoSpawner : MonoBehaviour
         managedCrabs.Sort((a, b) => a.PlayerNumber.CompareTo(b.PlayerNumber));
     }
 
-    void EnsureSceneCrabsHavePlayerInput()
+    void ProcessJoinMode()
     {
-        ClawGrab2D[] clawGrabbers = FindObjectsByType<ClawGrab2D>(
-            FindObjectsInactive.Include,
-            FindObjectsSortMode.None);
+        managedCrabs.RemoveAll(c => c == null);
 
-        foreach (ClawGrab2D grabber in clawGrabbers)
+        if (hotPlugSupport && (pendingResync || Gamepad.all.Count != lastKnownGamepadCount))
         {
-            if (grabber == null)
+            pendingResync = false;
+            lastKnownGamepadCount = Gamepad.all.Count;
+
+            if (disableExtraSceneCrabs)
+                DisableMissingControllerCrabs();
+        }
+
+        int count = Mathf.Min(Gamepad.all.Count, maxPlayers);
+
+        for (int i = 0; i < count; i++)
+        {
+            Gamepad gamepad = Gamepad.all[i];
+            if (gamepad == null)
                 continue;
 
-            if (!grabber.gameObject.scene.IsValid())
+            if (!gamepad.buttonSouth.wasPressedThisFrame)
                 continue;
 
-            CrabPlayerInput existing = grabber.GetComponentInParent<CrabPlayerInput>();
-            if (existing != null)
+            JoinPlayer(i);
+        }
+    }
+
+    void JoinPlayer(int playerIndex)
+    {
+        if (!NetworkManager.Singleton.IsServer)
+            return;
+
+        int playerNumber = playerIndex + 1;
+
+        if (joinedCrabsByIndex.TryGetValue(playerIndex, out CrabPlayerInput existing)
+            && existing != null)
+        {
+            existing.SetPlayerNumber(playerNumber);
+            existing.gameObject.SetActive(true);
+            return;
+        }
+
+        CrabPlayerInput crab = FindManagedCrabForPlayer(playerNumber);
+
+        if (crab == null)
+        {
+            if (crabPrefab == null)
+            {
+                Debug.LogWarning($"{nameof(CrabAutoSpawner)} missing crab prefab. Could not spawn player {playerNumber} crab.");
+                return;
+            }
+
+            Vector3 spawnPosition = GetSpawnPosition(playerIndex);
+            Quaternion spawnRotation = crabPrefab.transform.rotation;
+
+            crab = Instantiate(crabPrefab, spawnPosition, spawnRotation);
+            crab.GetComponent<NetworkObject>().Spawn();
+
+            managedCrabs.Add(crab);
+        }
+
+        crab.SetPlayerNumber(playerNumber);
+        crab.gameObject.SetActive(true);
+        joinedCrabsByIndex[playerIndex] = crab;
+    }
+    CrabPlayerInput FindManagedCrabForPlayer(int playerNumber)
+    {
+        for (int i = 0; i < managedCrabs.Count; i++)
+        {
+            CrabPlayerInput crab = managedCrabs[i];
+            if (crab == null)
                 continue;
 
-            grabber.gameObject.AddComponent<CrabPlayerInput>();
+            if (crab.PlayerNumber == playerNumber)
+                return crab;
+        }
+
+        return null;
+    }
+
+    void DisableMissingControllerCrabs()
+    {
+        List<int> missing = new List<int>();
+
+        foreach (KeyValuePair<int, CrabPlayerInput> pair in joinedCrabsByIndex)
+        {
+            if (pair.Key < Gamepad.all.Count)
+                continue;
+
+            if (pair.Value != null)
+                pair.Value.gameObject.SetActive(false);
+
+            missing.Add(pair.Key);
+        }
+
+        for (int i = 0; i < missing.Count; i++)
+            joinedCrabsByIndex.Remove(missing[i]);
+    }
+
+    void SetManagedCrabsActive(bool isActive)
+    {
+        for (int i = 0; i < managedCrabs.Count; i++)
+        {
+            if (managedCrabs[i] != null)
+                managedCrabs[i].gameObject.SetActive(isActive);
         }
     }
 
     void OnDeviceChange(InputDevice device, InputDeviceChange change)
     {
+        if (!CanRunSpawner())
+            return;
+
         if (!hotPlugSupport)
             return;
 
@@ -161,6 +280,15 @@ public class CrabAutoSpawner : MonoBehaviour
         {
             pendingResync = true;
         }
+    }
+
+    bool CanRunSpawner()
+    {
+        if (runDuringOnlineSession)
+            return true;
+
+        return NetworkManager.Singleton == null
+            || !NetworkManager.Singleton.IsListening;
     }
 
     Vector3 GetSpawnPosition(int playerIndex)
