@@ -1138,7 +1138,7 @@ HingeJoint2D:
   m_BreakAction: 3
   m_AutoConfigureConnectedAnchor: 1
   m_Anchor: {x: 0, y: 0}
-  m_ConnectedAnchor: {x: -1.5000002, y: -0.23999928}
+  m_ConnectedAnchor: {x: -1.5000002, y: -0.24}
   m_UseConnectedAnchor: 1
   m_UseMotor: 0
   m_Motor:
@@ -1345,7 +1345,7 @@ HingeJoint2D:
   m_BreakAction: 3
   m_AutoConfigureConnectedAnchor: 1
   m_Anchor: {x: 0, y: 0}
-  m_ConnectedAnchor: {x: 1.68, y: -0.18999958}
+  m_ConnectedAnchor: {x: 1.6800003, y: -0.18999994}
   m_UseConnectedAnchor: 1
   m_UseMotor: 0
   m_Motor:
@@ -1694,6 +1694,7 @@ GameObject:
   - component: {fileID: 8497678480187424313}
   - component: {fileID: -7410629628136716247}
   - component: {fileID: -4778213615187962698}
+  - component: {fileID: -205854900693306694}
   m_Layer: 0
   m_Name: Crab
   m_TagString: Untagged
@@ -1768,14 +1769,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 232402319
-  InScenePlacedSourceGlobalObjectIdHash: 0
+  GlobalObjectIdHash: 3083557243
+  InScenePlacedSourceGlobalObjectIdHash: 232402319
   DeferredDespawnTick: 0
   Ownership: 1
   AlwaysReplicateAsRoot: 0
   SynchronizeTransform: 1
   ActiveSceneSynchronization: 0
-  SceneMigrationSynchronization: 1
+  SceneMigrationSynchronization: 0
   SpawnWithObservers: 1
   DontDestroyWithOwner: 0
   AutoObjectParentSync: 1
@@ -1827,6 +1828,20 @@ MonoBehaviour:
   SwitchTransformSpaceWhenParented: 0
   Interpolate: 1
   SlerpPosition: 0
+--- !u!114 &-205854900693306694
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8184623766109925514}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0182eda3323c6644e926e96bfce2c0cc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CrabNetworkSync2D
+  ShowTopMostFoldoutHeaderGroup: 1
+  disableRemotePhysicsSimulation: 1
 --- !u!1 &8861845932022050980
 GameObject:
   m_ObjectHideFlags: 0

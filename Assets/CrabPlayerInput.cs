@@ -75,4 +75,19 @@ public class CrabPlayerInput : MonoBehaviour
         playerNumber = Mathf.Max(1, playerNumber);
         onlineGamepadNumber = Mathf.Max(1, onlineGamepadNumber);
     }
+
+    void Start()
+    {
+        EnsureNetworkSyncComponent();
+    }
+
+    void EnsureNetworkSyncComponent()
+    {
+        NetworkObject networkObject = GetNetworkObject();
+        if (networkObject == null)
+            return;
+
+        if (networkObject.GetComponent<CrabNetworkSync2D>() == null)
+            networkObject.gameObject.AddComponent<CrabNetworkSync2D>();
+    }
 }
