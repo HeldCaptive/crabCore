@@ -9,7 +9,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3907558948008484167}
-  - component: {fileID: 7003050785554283115}
   m_Layer: 7
   m_Name: LeftClawTip
   m_TagString: Untagged
@@ -26,26 +25,12 @@ Transform:
   m_GameObject: {fileID: 455887061781761789}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 1.16, y: -0.96, z: 0}
+  m_LocalPosition: {x: 1.29, y: -1.12, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 4950633502583165126}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &7003050785554283115
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 455887061781761789}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 28a56cc8dca99a241b14558c8a3a341a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: '::'
-  radius: 0.5
-  color: {r: 0, g: 1, b: 0, a: 1}
 --- !u!1 &548516338273209174
 GameObject:
   m_ObjectHideFlags: 0
@@ -597,7 +582,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6705027378682398982}
-  - component: {fileID: 4163060174848132065}
   m_Layer: 7
   m_Name: RightClawTip
   m_TagString: Untagged
@@ -614,26 +598,12 @@ Transform:
   m_GameObject: {fileID: 1994311101185984597}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -1.198, y: -1.003, z: 0}
+  m_LocalPosition: {x: -1.29, y: -1.18, z: 0}
   m_LocalScale: {x: 3.38, y: 3.69, z: 2.6}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1326450159892772682}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &4163060174848132065
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1994311101185984597}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 28a56cc8dca99a241b14558c8a3a341a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: '::'
-  radius: 0.5
-  color: {r: 0, g: 1, b: 0, a: 1}
 --- !u!1 &2416552319521429129
 GameObject:
   m_ObjectHideFlags: 0
@@ -1345,7 +1315,7 @@ HingeJoint2D:
   m_BreakAction: 3
   m_AutoConfigureConnectedAnchor: 1
   m_Anchor: {x: 0, y: 0}
-  m_ConnectedAnchor: {x: 1.6800003, y: -0.18999994}
+  m_ConnectedAnchor: {x: 1.6800003, y: -0.19000006}
   m_UseConnectedAnchor: 1
   m_UseMotor: 0
   m_Motor:
@@ -1734,14 +1704,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: '::'
   leftClaw: {fileID: 4508911601572117146}
   rightClaw: {fileID: 8539027936468922140}
+  leftClawTip: {fileID: 3907558948008484167}
+  rightClawTip: {fileID: 6705027378682398982}
+  leftClawGrabOffset: {x: 0.37, y: -0.14}
+  rightClawGrabOffset: {x: -0.23, y: -0.33}
   grabbableLayers:
     serializedVersion: 2
     m_Bits: 64
-  grabRadius: 2
+  grabRadius: 0.73
   jointFrequency: 30
   jointDampingRatio: 2
   clawLinearDamping: 10
   clawAngularDamping: 10
+  showDebugRadius: 1
 --- !u!114 &8497678480187424313
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1769,7 +1744,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 3083557243
+  GlobalObjectIdHash: 3108346785
   InScenePlacedSourceGlobalObjectIdHash: 232402319
   DeferredDespawnTick: 0
   Ownership: 1
@@ -1842,6 +1817,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CrabNetworkSync2D
   ShowTopMostFoldoutHeaderGroup: 1
   disableRemotePhysicsSimulation: 1
+  interpolationLerp: 0.15
 --- !u!1 &8861845932022050980
 GameObject:
   m_ObjectHideFlags: 0

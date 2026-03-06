@@ -12,14 +12,18 @@ using UnityEngine.InputSystem;
 
 public class NetworkStart : MonoBehaviour
 {
+    bool showMainMenu = true;  // Show at start
     bool showHostUI;
+    bool showHostCodeReadyUI;  // New state: code generated, waiting to start
     bool showJoinChoiceUI;
     bool showJoinRelayUI;
     bool showJoinCodeUI;
 
     string joinCodeInput = "";
     string activeJoinCode = "";
+    string hostJoinCode = "";  // Generated relay code for host
     string connectionStatus = "";
+    Allocation relayAllocation;  // Store allocation for later use
 
     bool isBusy;
     bool isConnectingClient;
@@ -33,44 +37,53 @@ public class NetworkStart : MonoBehaviour
     GUIStyle textFieldStyle;
     GUIStyle buttonStyle;
     GUIStyle bigButtonStyle;
+    GUIStyle selectedButtonStyle;
+    GUIStyle codeButtonStyle;
     GUIStyle statusStyle;
     bool stylesInitialized;
+
+    int selectedIndex = 0;
+    float navigationCooldown = 0f;
+    const float navigationDelay = 0.15f;
 
     void Update()
     {
         EnsureCallbacksBound();
 
-        if (Keyboard.current == null || NetworkManager.Singleton == null)
+        if (NetworkManager.Singleton == null)
             return;
 
-        if (!NetworkManager.Singleton.IsListening)
+        // Hide main menu once connected
+        if (NetworkManager.Singleton.IsListening)
         {
-            if (!isBusy && Keyboard.current.hKey.wasPressedThisFrame)
-            {
-                showHostUI = true;
-                showJoinChoiceUI = false;
-                showJoinRelayUI = false;
-                connectionStatus = "";
-            }
-
-            if (!isBusy && Keyboard.current.jKey.wasPressedThisFrame)
-            {
-                showJoinChoiceUI = true;
-                showHostUI = false;
-                showJoinRelayUI = false;
-                connectionStatus = "";
-                if (!string.IsNullOrEmpty(GUIUtility.systemCopyBuffer))
-                    joinCodeInput = GUIUtility.systemCopyBuffer.Trim();
-            }
+            showMainMenu = false;
         }
 
-        if ((showHostUI || showJoinChoiceUI || showJoinRelayUI) && Keyboard.current.escapeKey.wasPressedThisFrame)
+        // Handle controller navigation
+        HandleControllerInput();
+
+        // ESC or B button to go back
+        bool backPressed = (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame) ||
+                           (Gamepad.current != null && Gamepad.current.buttonEast.wasPressedThisFrame);
+
+        if ((showHostUI || showHostCodeReadyUI || showJoinChoiceUI || showJoinRelayUI) && backPressed)
         {
-            showHostUI = false;
-            showJoinChoiceUI = false;
-            showJoinRelayUI = false;
-            if (!isConnectingClient)
-                connectionStatus = "";
+            if (showHostCodeReadyUI)
+            {
+                showHostCodeReadyUI = false;
+                showHostUI = true;
+                selectedIndex = 0;
+            }
+            else
+            {
+                showHostUI = false;
+                showJoinChoiceUI = false;
+                showJoinRelayUI = false;
+                showMainMenu = true;  // Return to main menu
+                selectedIndex = 0;
+                if (!isConnectingClient)
+                    connectionStatus = "";
+            }
         }
 
         if (isConnectingClient && Time.unscaledTime - connectStartTime > connectTimeoutSeconds)
@@ -86,12 +99,153 @@ public class NetworkStart : MonoBehaviour
         }
     }
 
+    void HandleControllerInput()
+    {
+        Gamepad gamepad = Gamepad.current;
+        if (gamepad == null)
+            return;
+
+        // Update navigation cooldown
+        if (navigationCooldown > 0f)
+            navigationCooldown -= Time.unscaledDeltaTime;
+
+        // Left stick navigation
+        float verticalInput = gamepad.leftStick.ReadValue().y;
+        
+        if (navigationCooldown <= 0f && Mathf.Abs(verticalInput) > 0.5f)
+        {
+            if (verticalInput > 0.5f) // Up
+            {
+                selectedIndex--;
+                navigationCooldown = navigationDelay;
+            }
+            else if (verticalInput < -0.5f) // Down
+            {
+                selectedIndex++;
+                navigationCooldown = navigationDelay;
+            }
+        }
+
+        // A button to confirm
+        if (gamepad.buttonSouth.wasPressedThisFrame)
+        {
+            ConfirmSelection();
+        }
+    }
+
+    void ConfirmSelection()
+    {
+        if (showMainMenu)
+        {
+            selectedIndex = Mathf.Clamp(selectedIndex, 0, 1);
+            if (selectedIndex == 0) // Host
+            {
+                showMainMenu = false;
+                showHostUI = true;
+                selectedIndex = 0;
+                connectionStatus = "";
+            }
+            else if (selectedIndex == 1) // Join
+            {
+                showMainMenu = false;
+                showJoinChoiceUI = true;
+                selectedIndex = 0;
+                connectionStatus = "";
+                if (!string.IsNullOrEmpty(GUIUtility.systemCopyBuffer))
+                    joinCodeInput = GUIUtility.systemCopyBuffer.Trim();
+            }
+        }
+        else if (showHostUI)
+        {
+            selectedIndex = Mathf.Clamp(selectedIndex, 0, 2);
+            if (selectedIndex == 0) // Quick Local
+                StartQuickLocalHost();
+            else if (selectedIndex == 1) // Relay - generate code but don't start yet
+            {
+                if (!isBusy)
+                    _ = GenerateRelayCodeAsync();
+            }
+            else if (selectedIndex == 2) // Back
+            {
+                showHostUI = false;
+                showMainMenu = true;
+                selectedIndex = 0;
+            }
+        }
+        else if (showHostCodeReadyUI)
+        {
+            selectedIndex = Mathf.Clamp(selectedIndex, 0, 2);
+            if (selectedIndex == 0) // Copy code
+            {
+                GUIUtility.systemCopyBuffer = hostJoinCode;
+                connectionStatus = "Code copied to clipboard!";
+            }
+            else if (selectedIndex == 1) // Start Game
+            {
+                StartRelayHostWithCode();
+            }
+            else if (selectedIndex == 2) // Back
+            {
+                showHostCodeReadyUI = false;
+                showHostUI = true;
+                selectedIndex = 0;
+            }
+        }
+        else if (showJoinChoiceUI)
+        {
+            selectedIndex = Mathf.Clamp(selectedIndex, 0, 2);
+            if (selectedIndex == 0) // Quick Local
+                StartQuickLocalClient();
+            else if (selectedIndex == 1) // Join Relay
+            {
+                showJoinChoiceUI = false;
+                showJoinRelayUI = true;
+                selectedIndex = 0;
+                if (!isConnectingClient)
+                    connectionStatus = "";
+            }
+            else if (selectedIndex == 2) // Back
+            {
+                showJoinChoiceUI = false;
+                showMainMenu = true;
+                selectedIndex = 0;
+            }
+        }
+        else if (showJoinRelayUI)
+        {
+            // Dynamic button count based on retry visibility
+            bool showRetry = !isBusy && !string.IsNullOrWhiteSpace(joinCodeInput) && !string.IsNullOrEmpty(connectionStatus);
+            int maxIndex = showRetry ? 2 : 1;
+            selectedIndex = Mathf.Clamp(selectedIndex, 0, maxIndex);
+            
+            if (selectedIndex == 0) // Connect
+            {
+                if (!isBusy)
+                    _ = JoinRelayAsync(joinCodeInput.Trim());
+            }
+            else if (selectedIndex == 1 && showRetry) // Retry
+            {
+                _ = JoinRelayAsync(joinCodeInput.Trim());
+            }
+            else if (selectedIndex == maxIndex) // Back
+            {
+                showJoinRelayUI = false;
+                showJoinChoiceUI = true;
+                selectedIndex = 0;
+            }
+        }
+    }
+
     void OnGUI()
     {
         InitializeStyles();
 
-        if (showHostUI)
+        if (showMainMenu)
+            DrawMainMenu();
+        else if (showHostUI)
             DrawHostMenu();
+        else if (showHostCodeReadyUI)
+            DrawHostCodeReadyMenu();
         else if (showJoinChoiceUI)
             DrawJoinChoiceMenu();
         else if (showJoinRelayUI)
@@ -101,8 +255,50 @@ public class NetworkStart : MonoBehaviour
             DrawJoinCodeOverlay();
     }
 
+    void DrawMainMenu()
+    {
+        selectedIndex = Mathf.Clamp(selectedIndex, 0, 1);
+        
+        float width = 350f;
+        float height = 200f;
+        Rect rect = new Rect((Screen.width - width) * 0.5f, (Screen.height - height) * 0.5f, width, height);
+
+        GUI.Box(rect, "");
+        GUILayout.BeginArea(rect);
+        GUILayout.BeginVertical();
+        GUILayout.Space(10);
+        GUILayout.Label("Multiplayer", GUI.skin.label);
+        GUILayout.Label("Left Stick = Navigate | A = Confirm | B = Back", statusStyle);
+        GUILayout.Space(15);
+
+        if (GUILayout.Button("Host", selectedIndex == 0 ? selectedButtonStyle : bigButtonStyle, GUILayout.Height(50)))
+        {
+            showMainMenu = false;
+            showHostUI = true;
+            selectedIndex = 0;
+            connectionStatus = "";
+        }
+
+        GUILayout.Space(10);
+
+        if (GUILayout.Button("Join", selectedIndex == 1 ? selectedButtonStyle : bigButtonStyle, GUILayout.Height(50)))
+        {
+            showMainMenu = false;
+            showJoinChoiceUI = true;
+            selectedIndex = 0;
+            connectionStatus = "";
+            if (!string.IsNullOrEmpty(GUIUtility.systemCopyBuffer))
+                joinCodeInput = GUIUtility.systemCopyBuffer.Trim();
+        }
+
+        GUILayout.EndVertical();
+        GUILayout.EndArea();
+    }
+
     void DrawHostMenu()
     {
+        selectedIndex = Mathf.Clamp(selectedIndex, 0, 2);
+        
         float width = 420f;
         float height = 210f;
         Rect rect = new Rect((Screen.width - width) * 0.5f, (Screen.height - height) * 0.5f, width, height);
@@ -114,20 +310,73 @@ public class NetworkStart : MonoBehaviour
         GUILayout.Label("Host - Choose Type", GUI.skin.label);
         GUILayout.Space(10);
 
-        if (GUILayout.Button("Quick Test Local\nStart host on this machine", bigButtonStyle, GUILayout.Height(50)))
+        if (GUILayout.Button("Quick Test Local\nStart host on this machine", selectedIndex == 0 ? selectedButtonStyle : bigButtonStyle, GUILayout.Height(50)))
             StartQuickLocalHost();
 
         GUILayout.Space(5);
 
-        if (GUILayout.Button(isBusy ? "Starting Relay Host..." : "External (Relay Join Code)\nNo port forwarding needed", bigButtonStyle, GUILayout.Height(50)))
+        if (GUILayout.Button(isBusy ? "Generating Join Code..." : "External (Relay Join Code)\nNo port forwarding needed", selectedIndex == 1 ? selectedButtonStyle : bigButtonStyle, GUILayout.Height(50)))
         {
             if (!isBusy)
-                _ = StartRelayHostAsync();
+                _ = GenerateRelayCodeAsync();
         }
 
         GUILayout.Space(10);
-        if (GUILayout.Button("Cancel (ESC)", buttonStyle, GUILayout.Height(25)))
+        if (GUILayout.Button("Back (ESC)", selectedIndex == 2 ? selectedButtonStyle : buttonStyle, GUILayout.Height(25)))
+        {
             showHostUI = false;
+            showMainMenu = true;
+            selectedIndex = 0;
+        }
+
+        GUILayout.EndVertical();
+        GUILayout.EndArea();
+    }
+
+    void DrawHostCodeReadyMenu()
+    {
+        selectedIndex = Mathf.Clamp(selectedIndex, 0, 2);
+        
+        float width = 500f;
+        float height = 280f;
+        Rect rect = new Rect((Screen.width - width) * 0.5f, (Screen.height - height) * 0.5f, width, height);
+
+        GUI.Box(rect, "");
+        GUILayout.BeginArea(rect);
+        GUILayout.BeginVertical();
+        GUILayout.Space(10);
+        GUILayout.Label("Relay Join Code Ready", GUI.skin.label);
+        GUILayout.Space(5);
+        GUILayout.Label("Share this code with players to join", statusStyle);
+        GUILayout.Space(10);
+
+        // Display join code as a button to copy
+        if (GUILayout.Button(hostJoinCode, selectedIndex == 0 ? selectedButtonStyle : codeButtonStyle, GUILayout.Height(60)))
+        {
+            GUIUtility.systemCopyBuffer = hostJoinCode;
+            connectionStatus = "Code copied to clipboard!";
+        }
+        
+        GUILayout.Space(5);
+        if (!string.IsNullOrEmpty(connectionStatus))
+        {
+            GUILayout.Label(connectionStatus, statusStyle);
+            GUILayout.Space(5);
+        }
+
+        GUILayout.Space(10);
+        if (GUILayout.Button("Start Game", selectedIndex == 1 ? selectedButtonStyle : bigButtonStyle, GUILayout.Height(50)))
+        {
+            StartRelayHostWithCode();
+        }
+
+        GUILayout.Space(10);
+        if (GUILayout.Button("Back", selectedIndex == 2 ? selectedButtonStyle : buttonStyle, GUILayout.Height(25)))
+        {
+            showHostCodeReadyUI = false;
+            showHostUI = true;
+            selectedIndex = 0;
+        }
 
         GUILayout.EndVertical();
         GUILayout.EndArea();
@@ -135,6 +384,8 @@ public class NetworkStart : MonoBehaviour
 
     void DrawJoinChoiceMenu()
     {
+        selectedIndex = Mathf.Clamp(selectedIndex, 0, 2);
+        
         float width = 430f;
         float height = 210f;
         Rect rect = new Rect((Screen.width - width) * 0.5f, (Screen.height - height) * 0.5f, width, height);
@@ -146,22 +397,27 @@ public class NetworkStart : MonoBehaviour
         GUILayout.Label("Join - Choose Type", GUI.skin.label);
         GUILayout.Space(10);
 
-        if (GUILayout.Button("Quick Connect Local\nConnect to 127.0.0.1:7777", bigButtonStyle, GUILayout.Height(50)))
+        if (GUILayout.Button("Quick Connect Local\nConnect to 127.0.0.1:7777", selectedIndex == 0 ? selectedButtonStyle : bigButtonStyle, GUILayout.Height(50)))
             StartQuickLocalClient();
 
         GUILayout.Space(5);
 
-        if (GUILayout.Button("Join External (Relay Code)\nEnter code from host", bigButtonStyle, GUILayout.Height(50)))
+        if (GUILayout.Button("Join External (Relay Code)\nEnter code from host", selectedIndex == 1 ? selectedButtonStyle : bigButtonStyle, GUILayout.Height(50)))
         {
             showJoinChoiceUI = false;
             showJoinRelayUI = true;
+            selectedIndex = 0;
             if (!isConnectingClient)
                 connectionStatus = "";
         }
 
         GUILayout.Space(10);
-        if (GUILayout.Button("Cancel (ESC)", buttonStyle, GUILayout.Height(25)))
+        if (GUILayout.Button("Back (ESC)", selectedIndex == 2 ? selectedButtonStyle : buttonStyle, GUILayout.Height(25)))
+        {
             showJoinChoiceUI = false;
+            showMainMenu = true;
+            selectedIndex = 0;
+        }
 
         GUILayout.EndVertical();
         GUILayout.EndArea();
@@ -169,6 +425,10 @@ public class NetworkStart : MonoBehaviour
 
     void DrawJoinRelayMenu()
     {
+        // Dynamic button count based on retry visibility
+        int maxIndex = (!isBusy && !string.IsNullOrWhiteSpace(joinCodeInput) && !string.IsNullOrEmpty(connectionStatus)) ? 2 : 1;
+        selectedIndex = Mathf.Clamp(selectedIndex, 0, maxIndex);
+        
         float width = 460f;
         float height = 250f;
         Rect rect = new Rect((Screen.width - width) * 0.5f, (Screen.height - height) * 0.5f, width, height);
@@ -183,16 +443,14 @@ public class NetworkStart : MonoBehaviour
         joinCodeInput = GUILayout.TextField(joinCodeInput, textFieldStyle, GUILayout.Height(35));
         GUILayout.Space(5);
 
-        GUILayout.BeginHorizontal();
-        if (GUILayout.Button("Paste", buttonStyle, GUILayout.Height(30)))
-            joinCodeInput = GUIUtility.systemCopyBuffer.Trim();
+        GUILayout.Label("Use left stick up/down, A to confirm, Paste code from clipboard", statusStyle);
+        GUILayout.Space(5);
 
-        if (GUILayout.Button(isBusy ? "Connecting..." : "Connect", buttonStyle, GUILayout.Height(30)))
+        if (GUILayout.Button(isBusy ? "Connecting..." : "Connect", selectedIndex == 0 ? selectedButtonStyle : buttonStyle, GUILayout.Height(40)))
         {
             if (!isBusy)
                 _ = JoinRelayAsync(joinCodeInput.Trim());
         }
-        GUILayout.EndHorizontal();
 
         GUILayout.Space(5);
         if (!string.IsNullOrEmpty(connectionStatus))
@@ -201,14 +459,18 @@ public class NetworkStart : MonoBehaviour
             GUILayout.Space(5);
         }
 
-        if (!isBusy && !string.IsNullOrWhiteSpace(joinCodeInput) && GUILayout.Button("Retry", buttonStyle, GUILayout.Height(25)))
-            _ = JoinRelayAsync(joinCodeInput.Trim());
+        if (!isBusy && !string.IsNullOrWhiteSpace(joinCodeInput) && !string.IsNullOrEmpty(connectionStatus))
+        {
+            if (GUILayout.Button("Retry", selectedIndex == 1 ? selectedButtonStyle : buttonStyle, GUILayout.Height(25)))
+                _ = JoinRelayAsync(joinCodeInput.Trim());
+            GUILayout.Space(5);
+        }
 
-        GUILayout.Space(5);
-        if (GUILayout.Button("Back", buttonStyle, GUILayout.Height(25)))
+        if (GUILayout.Button("Back", selectedIndex == maxIndex ? selectedButtonStyle : buttonStyle, GUILayout.Height(25)))
         {
             showJoinRelayUI = false;
             showJoinChoiceUI = true;
+            selectedIndex = 0;
         }
 
         GUILayout.EndVertical();
@@ -348,6 +610,83 @@ public class NetworkStart : MonoBehaviour
         }
     }
 
+    async Task GenerateRelayCodeAsync()
+    {
+        if (NetworkManager.Singleton == null)
+            return;
+
+        isBusy = true;
+        connectionStatus = "Generating join code...";
+
+        try
+        {
+            await EnsureUnityServicesAsync();
+
+            UnityTransport transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
+            if (transport == null)
+            {
+                connectionStatus = "UnityTransport missing on NetworkManager.";
+                isBusy = false;
+                return;
+            }
+
+            const int maxConnections = 3;
+            relayAllocation = await RelayService.Instance.CreateAllocationAsync(maxConnections);
+            hostJoinCode = await RelayService.Instance.GetJoinCodeAsync(relayAllocation.AllocationId);
+
+            // Show the code ready menu
+            showHostUI = false;
+            showHostCodeReadyUI = true;
+            selectedIndex = 0;
+            connectionStatus = "";
+        }
+        catch (Exception ex)
+        {
+            connectionStatus = $"Failed to generate join code: {ex.Message}";
+            Debug.LogWarning(connectionStatus);
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    void StartRelayHostWithCode()
+    {
+        if (NetworkManager.Singleton == null || relayAllocation == null)
+        {
+            connectionStatus = "No relay allocation available.";
+            return;
+        }
+
+        try
+        {
+            UnityTransport transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
+            if (transport == null)
+            {
+                connectionStatus = "UnityTransport missing on NetworkManager.";
+                return;
+            }
+
+            transport.SetRelayServerData(new RelayServerData(relayAllocation, "dtls"));
+
+            bool started = NetworkManager.Singleton.StartHost();
+            if (!started)
+            {
+                connectionStatus = "Failed to start Relay host.";
+                return;
+            }
+
+            showHostCodeReadyUI = false;
+            connectionStatus = "Relay host started!";
+        }
+        catch (Exception ex)
+        {
+            connectionStatus = $"Failed to start host: {ex.Message}";
+            Debug.LogWarning(connectionStatus);
+        }
+    }
+
     async Task JoinRelayAsync(string joinCode)
     {
         if (string.IsNullOrWhiteSpace(joinCode))
@@ -460,6 +799,24 @@ public class NetworkStart : MonoBehaviour
             fontStyle = FontStyle.Bold,
             alignment = TextAnchor.MiddleCenter,
             wordWrap = true
+        };
+
+        selectedButtonStyle = new GUIStyle(GUI.skin.button)
+        {
+            fontSize = 16,
+            fontStyle = FontStyle.Bold,
+            alignment = TextAnchor.MiddleCenter,
+            wordWrap = true,
+            normal = { textColor = Color.yellow }
+        };
+
+        codeButtonStyle = new GUIStyle(GUI.skin.button)
+        {
+            fontSize = 20,
+            fontStyle = FontStyle.Bold,
+            alignment = TextAnchor.MiddleCenter,
+            wordWrap = true,
+            normal = { textColor = Color.cyan }
         };
 
         statusStyle = new GUIStyle(GUI.skin.label)
