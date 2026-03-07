@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -21,12 +22,66 @@ public class ClawGrab2D : MonoBehaviour
     FixedJoint2D leftJoint;
     FixedJoint2D rightJoint;
     CrabPlayerInput playerInput;
+    Transform ownerRoot;
+    Collider2D[] ownColliders = new Collider2D[0];
 
     public bool AnyClamped => leftJoint != null || rightJoint != null;
 
     void Awake()
     {
+        ResolveReferencesIfMissing();
         playerInput = GetComponentInParent<CrabPlayerInput>();
+        ownerRoot = playerInput != null ? playerInput.transform : transform.root;
+        ConfigureCollisionBehavior();
+    }
+
+    void ResolveReferencesIfMissing()
+    {
+        if (leftClaw == null)
+            leftClaw = FindRigidbody2DByName("LeftClaw");
+
+        if (rightClaw == null)
+            rightClaw = FindRigidbody2DByName("RightClaw");
+
+        if (leftClawTip == null)
+            leftClawTip = FindChildTransformByName("LeftClawTip");
+
+        if (rightClawTip == null)
+            rightClawTip = FindChildTransformByName("RightClawTip");
+    }
+
+    Rigidbody2D FindRigidbody2DByName(string targetName)
+    {
+        Rigidbody2D[] bodies = GetComponentsInChildren<Rigidbody2D>(true);
+
+        for (int i = 0; i < bodies.Length; i++)
+        {
+            Rigidbody2D body = bodies[i];
+            if (body == null)
+                continue;
+
+            if (body.name == targetName)
+                return body;
+        }
+
+        return null;
+    }
+
+    Transform FindChildTransformByName(string targetName)
+    {
+        Transform[] children = GetComponentsInChildren<Transform>(true);
+
+        for (int i = 0; i < children.Length; i++)
+        {
+            Transform child = children[i];
+            if (child == null)
+                continue;
+
+            if (child.name == targetName)
+                return child;
+        }
+
+        return null;
     }
 
     void Update()
@@ -58,8 +113,7 @@ public class ClawGrab2D : MonoBehaviour
         // Use tip position if assigned, otherwise fall back to rigidbody position
         Vector2 basePosition = clawTip != null ? (Vector2)clawTip.position : claw.position;
         Vector2 grabPoint = basePosition + grabOffset;
-        Collider2D hit =
-            Physics2D.OverlapCircle(grabPoint, grabRadius, grabbableLayers);
+        Collider2D hit = FindGrabTarget(grabPoint, claw);
 
         if (hit == null) return;
 
@@ -79,6 +133,95 @@ public class ClawGrab2D : MonoBehaviour
             joint.connectedBody = hit.attachedRigidbody;
         else
             joint.connectedBody = null;
+    }
+
+    void ConfigureCollisionBehavior()
+    {
+        ownColliders = GetComponentsInChildren<Collider2D>(true);
+        if (ownColliders.Length == 0)
+            return;
+
+        HashSet<int> crabLayers = new HashSet<int>();
+
+        for (int i = 0; i < ownColliders.Length; i++)
+        {
+            Collider2D collider = ownColliders[i];
+            if (collider == null)
+                continue;
+
+            crabLayers.Add(collider.gameObject.layer);
+        }
+
+        int[] layers = new int[crabLayers.Count];
+        crabLayers.CopyTo(layers);
+
+        for (int i = 0; i < layers.Length; i++)
+        {
+            for (int j = i; j < layers.Length; j++)
+                Physics2D.IgnoreLayerCollision(layers[i], layers[j], false);
+        }
+
+        for (int i = 0; i < ownColliders.Length; i++)
+        {
+            Collider2D first = ownColliders[i];
+            if (first == null)
+                continue;
+
+            for (int j = i + 1; j < ownColliders.Length; j++)
+            {
+                Collider2D second = ownColliders[j];
+                if (second == null)
+                    continue;
+
+                Physics2D.IgnoreCollision(first, second, true);
+            }
+        }
+    }
+
+    Collider2D FindGrabTarget(Vector2 grabPoint, Rigidbody2D claw)
+    {
+        Collider2D[] hits = Physics2D.OverlapCircleAll(grabPoint, grabRadius, grabbableLayers);
+        Collider2D bestHit = null;
+        float bestDistanceSqr = float.PositiveInfinity;
+
+        for (int i = 0; i < hits.Length; i++)
+        {
+            Collider2D candidate = hits[i];
+            if (candidate == null || !candidate.enabled)
+                continue;
+
+            if (IsSelfCollider(candidate))
+                continue;
+
+            if (candidate.attachedRigidbody == claw)
+                continue;
+
+            Vector2 candidatePoint = candidate.ClosestPoint(grabPoint);
+            float distanceSqr = (candidatePoint - grabPoint).sqrMagnitude;
+
+            if (distanceSqr < bestDistanceSqr)
+            {
+                bestDistanceSqr = distanceSqr;
+                bestHit = candidate;
+            }
+        }
+
+        return bestHit;
+    }
+
+    bool IsSelfCollider(Collider2D candidate)
+    {
+        if (candidate == null)
+            return false;
+
+        if (ownerRoot != null && candidate.transform.IsChildOf(ownerRoot))
+            return true;
+
+        if (playerInput == null)
+            return false;
+
+        CrabPlayerInput candidateOwner = candidate.GetComponentInParent<CrabPlayerInput>();
+        return candidateOwner != null && candidateOwner == playerInput;
     }
 
     void Release(ref FixedJoint2D joint)

@@ -170,7 +170,7 @@ MonoBehaviour:
   rightClaw: {fileID: 0}
   grabbableLayers:
     serializedVersion: 2
-    m_Bits: 64
+    m_Bits: 704
 --- !u!1 &139302735
 GameObject:
   m_ObjectHideFlags: 0

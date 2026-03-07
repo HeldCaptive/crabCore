@@ -6,11 +6,17 @@ using System.Collections.Generic;
 [RequireComponent(typeof(NetworkObject))]
 public class CrabNetworkSync2D : NetworkBehaviour
 {
-    [SerializeField] bool disableRemotePhysicsSimulation = true;
+    [SerializeField] bool disableRemotePhysicsSimulation = false;
     [SerializeField] float interpolationLerp = 0.15f; // Smoothing speed for remote movement
+    [SerializeField] float remotePositionCorrection = 8f;
+    [SerializeField] float remoteRotationCorrection = 8f;
+    [SerializeField] bool spreadPlayersOnNetworkSpawn = true;
+    [SerializeField] Vector2 networkSpawnCenter = Vector2.zero;
+    [SerializeField] float networkSpawnSpacing = 6f;
 
     readonly List<Rigidbody2D> rigidbodies = new List<Rigidbody2D>();
     readonly List<RigidbodyState> lastAppliedStates = new List<RigidbodyState>();
+    bool initialSpawnPositionApplied;
     readonly NetworkList<RigidbodyState> syncedStates = new NetworkList<RigidbodyState>(
         null,
         NetworkVariableReadPermission.Everyone,
@@ -48,6 +54,10 @@ public class CrabNetworkSync2D : NetworkBehaviour
     public override void OnNetworkSpawn()
     {
         ResolveRigidbodies();
+
+        if (IsOwner)
+            TryApplyInitialSpawnSpread();
+
         EnsureStateListSize();
         ApplySimulationMode();
 
@@ -56,6 +66,53 @@ public class CrabNetworkSync2D : NetworkBehaviour
 
         if (IsOwner)
             WriteStatesFromOwner();
+    }
+
+    void TryApplyInitialSpawnSpread()
+    {
+        if (initialSpawnPositionApplied)
+            return;
+
+        if (!spreadPlayersOnNetworkSpawn)
+            return;
+
+        if (!IsOwner)
+            return;
+
+        if (rigidbodies.Count == 0)
+            return;
+
+        float spacing = Mathf.Max(0.1f, networkSpawnSpacing);
+        Vector2 targetPosition = networkSpawnCenter + Vector2.right * GetSpawnOffsetByClientId(OwnerClientId, spacing);
+        Vector2 currentRootPosition = transform.position;
+        Vector2 delta = targetPosition - currentRootPosition;
+
+        if (delta.sqrMagnitude > 0.0001f)
+        {
+            for (int i = 0; i < rigidbodies.Count; i++)
+            {
+                Rigidbody2D rb = rigidbodies[i];
+                if (rb == null)
+                    continue;
+
+                rb.position += delta;
+                rb.linearVelocity = Vector2.zero;
+                rb.angularVelocity = 0f;
+            }
+
+            transform.position = targetPosition;
+        }
+
+        initialSpawnPositionApplied = true;
+    }
+
+    float GetSpawnOffsetByClientId(ulong clientId, float spacing)
+    {
+        int pairIndex = (int)(clientId / 2);
+        bool isEven = (clientId % 2) == 0;
+        float halfStep = (pairIndex + 0.5f) * spacing;
+
+        return isEven ? -halfStep : halfStep;
     }
 
     public override void OnGainedOwnership()
@@ -179,6 +236,25 @@ public class CrabNetworkSync2D : NetworkBehaviour
 
             RigidbodyState targetState = syncedStates[i];
             RigidbodyState lastState = lastAppliedStates[i];
+
+            if (!disableRemotePhysicsSimulation)
+            {
+                Vector2 positionError = targetState.Position - rb.position;
+                float rotationError = Mathf.DeltaAngle(rb.rotation, targetState.Rotation);
+
+                rb.linearVelocity = targetState.LinearVelocity + positionError * remotePositionCorrection;
+                rb.angularVelocity = targetState.AngularVelocity + rotationError * remoteRotationCorrection;
+
+                lastAppliedStates[i] = new RigidbodyState
+                {
+                    Position = rb.position,
+                    Rotation = rb.rotation,
+                    LinearVelocity = rb.linearVelocity,
+                    AngularVelocity = rb.angularVelocity
+                };
+
+                continue;
+            }
 
             // Lerp position for smooth movement between network updates
             Vector2 smoothedPos = Vector2.Lerp(lastState.Position, targetState.Position, interpolationLerp);

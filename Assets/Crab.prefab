@@ -1710,7 +1710,7 @@ MonoBehaviour:
   rightClawGrabOffset: {x: -0.23, y: -0.33}
   grabbableLayers:
     serializedVersion: 2
-    m_Bits: 64
+    m_Bits: 704
   grabRadius: 0.73
   jointFrequency: 30
   jointDampingRatio: 2
@@ -1816,7 +1816,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CrabNetworkSync2D
   ShowTopMostFoldoutHeaderGroup: 1
-  disableRemotePhysicsSimulation: 1
+  disableRemotePhysicsSimulation: 0
   interpolationLerp: 0.15
 --- !u!1 &8861845932022050980
 GameObject:

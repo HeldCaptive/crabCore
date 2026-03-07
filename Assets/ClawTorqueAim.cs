@@ -62,9 +62,18 @@ public class ClawTorqueAim : MonoBehaviour
 
     void FixedUpdate()
     {
+        if (playerInput != null && !playerInput.HasInputAuthority)
+            return;
+
+        bool isIdleAim = aimInput.sqrMagnitude < 0.05f;
+        bool isAnyClamped = grab != null && grab.AnyClamped;
+
+        if (isIdleAim && isAnyClamped)
+            return;
+
         Vector2 dir;
 
-        if (aimInput.sqrMagnitude < 0.05f)
+        if (isIdleAim)
             dir = idleDirection.normalized;
         else
             dir = aimInput.normalized;
@@ -88,12 +97,12 @@ public class ClawTorqueAim : MonoBehaviour
         {
             float strength;
 
-            if (aimInput.sqrMagnitude < 0.05f)
+            if (isIdleAim)
                 strength = idleStrength;
             else
                 strength = pullStrength;
 
-            if (grab != null && grab.AnyClamped)
+            if (!isIdleAim && isAnyClamped)
                 strength *= liftMultiplier;
 
             Vector2 pull =

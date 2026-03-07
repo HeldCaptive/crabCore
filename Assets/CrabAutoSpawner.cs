@@ -17,6 +17,8 @@ public class CrabAutoSpawner : MonoBehaviour
     [SerializeField] Transform[] spawnPoints;
     [SerializeField, Min(1)] int maxPlayers = 4;
     [SerializeField] float fallbackSpacing = 3f;
+    [SerializeField, Min(0.1f)] float minSpawnDistance = 2.5f;
+    [SerializeField, Min(1)] int maxSpawnSearchSteps = 6;
 
     readonly List<CrabPlayerInput> managedCrabs = new List<CrabPlayerInput>();
     readonly Dictionary<int, CrabPlayerInput> joinedCrabsByIndex = new Dictionary<int, CrabPlayerInput>();
@@ -94,6 +96,7 @@ public class CrabAutoSpawner : MonoBehaviour
             if (i < managedCrabs.Count)
             {
                 crab = managedCrabs[i];
+                PlaceCrabAtSpawn(crab, i);
                 crab.gameObject.SetActive(true);
             }
             else
@@ -110,6 +113,8 @@ public class CrabAutoSpawner : MonoBehaviour
                 crab = Instantiate(crabPrefab, spawnPosition, spawnRotation);
                 crab.GetComponent<NetworkObject>().Spawn();
                 managedCrabs.Add(crab);
+
+                PlaceCrabAtSpawn(crab, i);
             }
 
             crab.SetPlayerNumber(i + 1);
@@ -189,6 +194,7 @@ public class CrabAutoSpawner : MonoBehaviour
         if (joinedCrabsByIndex.TryGetValue(playerIndex, out CrabPlayerInput existing)
             && existing != null)
         {
+            PlaceCrabAtSpawn(existing, playerIndex);
             existing.SetPlayerNumber(playerNumber);
             existing.gameObject.SetActive(true);
             return;
@@ -213,6 +219,7 @@ public class CrabAutoSpawner : MonoBehaviour
             managedCrabs.Add(crab);
         }
 
+        PlaceCrabAtSpawn(crab, playerIndex);
         crab.SetPlayerNumber(playerNumber);
         crab.gameObject.SetActive(true);
         joinedCrabsByIndex[playerIndex] = crab;
@@ -293,12 +300,81 @@ public class CrabAutoSpawner : MonoBehaviour
 
     Vector3 GetSpawnPosition(int playerIndex)
     {
+        Vector3 basePosition;
+
         if (spawnPoints != null && spawnPoints.Length > 0)
         {
             int pointIndex = Mathf.Min(playerIndex, spawnPoints.Length - 1);
-            return spawnPoints[pointIndex].position;
+            basePosition = spawnPoints[pointIndex].position;
+        }
+        else
+        {
+            basePosition = transform.position + Vector3.right * (playerIndex * fallbackSpacing);
         }
 
-        return transform.position + Vector3.right * (playerIndex * fallbackSpacing);
+        return FindClearSpawnPosition(basePosition);
+    }
+
+    Vector3 FindClearSpawnPosition(Vector3 desiredPosition)
+    {
+        if (IsSpawnPositionClear(desiredPosition))
+            return desiredPosition;
+
+        float spacing = Mathf.Max(0.1f, fallbackSpacing);
+
+        for (int step = 1; step <= maxSpawnSearchSteps; step++)
+        {
+            float offset = spacing * step;
+
+            Vector3 rightCandidate = desiredPosition + Vector3.right * offset;
+            if (IsSpawnPositionClear(rightCandidate))
+                return rightCandidate;
+
+            Vector3 leftCandidate = desiredPosition - Vector3.right * offset;
+            if (IsSpawnPositionClear(leftCandidate))
+                return leftCandidate;
+        }
+
+        return desiredPosition + Vector3.right * (spacing * (maxSpawnSearchSteps + 1));
+    }
+
+    bool IsSpawnPositionClear(Vector3 position)
+    {
+        float minDistanceSqr = minSpawnDistance * minSpawnDistance;
+
+        for (int i = 0; i < managedCrabs.Count; i++)
+        {
+            CrabPlayerInput crab = managedCrabs[i];
+            if (crab == null)
+                continue;
+
+            if (!crab.gameObject.activeInHierarchy)
+                continue;
+
+            Vector3 delta = crab.transform.position - position;
+            if (delta.sqrMagnitude < minDistanceSqr)
+                return false;
+        }
+
+        return true;
+    }
+
+    void PlaceCrabAtSpawn(CrabPlayerInput crab, int playerIndex)
+    {
+        if (crab == null)
+            return;
+
+        crab.transform.position = GetSpawnPosition(playerIndex);
+
+        Rigidbody2D[] rigidbodies = crab.GetComponentsInChildren<Rigidbody2D>(true);
+        for (int i = 0; i < rigidbodies.Length; i++)
+        {
+            Rigidbody2D rb = rigidbodies[i];
+            if (rb == null)
+                continue;
+
+            rb.linearVelocity = Vector2.zero;
+            rb.angularVelocity = 0f;
+        }
     }
 }
