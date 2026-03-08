@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
@@ -12,6 +13,12 @@ using UnityEngine.InputSystem;
 
 public class NetworkStart : MonoBehaviour
 {
+    [Header("Obstacle Loading")]
+    [SerializeField] bool delayObstacleActivationUntilModeSelected = true;
+    [SerializeField] bool autoFindFloatingObstacles = true;
+    [SerializeField] bool autoFindClampSurfaceObstacles = true;
+    [SerializeField] GameObject[] obstacleRoots;
+
     bool showMainMenu = true;  // Show at start
     bool showHostUI;
     bool showHostCodeReadyUI;  // New state: code generated, waiting to start
@@ -45,6 +52,17 @@ public class NetworkStart : MonoBehaviour
     int selectedIndex = 0;
     float navigationCooldown = 0f;
     const float navigationDelay = 0.15f;
+    readonly List<GameObject> cachedObstacleRoots = new List<GameObject>();
+    bool obstaclesActivatedForSession;
+    bool activateObstaclesOnClientConnected;
+
+    void Awake()
+    {
+        CacheObstacleRoots();
+
+        if (delayObstacleActivationUntilModeSelected)
+            SetObstacleRootsActive(false);
+    }
 
     void Update()
     {
@@ -505,6 +523,8 @@ public class NetworkStart : MonoBehaviour
         if (NetworkManager.Singleton == null)
             return;
 
+        ActivateObstaclesForSelectedMode();
+
         isBusy = false;
         isConnectingClient = false;
         showHostUI = false;
@@ -537,6 +557,8 @@ public class NetworkStart : MonoBehaviour
         if (NetworkManager.Singleton == null)
             return;
 
+        PrepareClientObstacleActivation();
+
         UnityTransport transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
         if (transport == null)
         {
@@ -551,6 +573,7 @@ public class NetworkStart : MonoBehaviour
         bool started = NetworkManager.Singleton.StartClient();
         if (!started)
         {
+            activateObstaclesOnClientConnected = false;
             connectionStatus = "Could not start local client. Is host running?";
             showJoinChoiceUI = true;
             return;
@@ -566,6 +589,8 @@ public class NetworkStart : MonoBehaviour
     {
         if (NetworkManager.Singleton == null)
             return;
+
+        ActivateObstaclesForSelectedMode();
 
         isBusy = true;
         connectionStatus = "Initializing Relay services...";
@@ -659,6 +684,8 @@ public class NetworkStart : MonoBehaviour
             return;
         }
 
+        ActivateObstaclesForSelectedMode();
+
         try
         {
             UnityTransport transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
@@ -698,6 +725,8 @@ public class NetworkStart : MonoBehaviour
         if (NetworkManager.Singleton == null)
             return;
 
+        PrepareClientObstacleActivation();
+
         isBusy = true;
         isConnectingClient = true;
         connectStartTime = Time.unscaledTime;
@@ -725,6 +754,7 @@ public class NetworkStart : MonoBehaviour
             if (!started)
             {
                 isConnectingClient = false;
+                activateObstaclesOnClientConnected = false;
                 connectionStatus = "Could not start client for this join code. Please retry.";
                 showJoinChoiceUI = true;
                 showJoinRelayUI = true;
@@ -737,6 +767,7 @@ public class NetworkStart : MonoBehaviour
         catch (Exception ex)
         {
             isConnectingClient = false;
+            activateObstaclesOnClientConnected = false;
             connectionStatus = $"Join failed: {ex.Message}. Check the code and try again.";
             showJoinChoiceUI = true;
             showJoinRelayUI = true;
@@ -829,6 +860,92 @@ public class NetworkStart : MonoBehaviour
         stylesInitialized = true;
     }
 
+    void CacheObstacleRoots()
+    {
+        cachedObstacleRoots.Clear();
+
+        if (obstacleRoots != null)
+        {
+            for (int i = 0; i < obstacleRoots.Length; i++)
+                AddObstacleRoot(obstacleRoots[i]);
+        }
+
+        if (!autoFindFloatingObstacles)
+        {
+            if (!autoFindClampSurfaceObstacles)
+                return;
+        }
+
+        if (autoFindFloatingObstacles)
+        {
+            FloatingPlatforms[] floatingObstacles = FindObjectsByType<FloatingPlatforms>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            for (int i = 0; i < floatingObstacles.Length; i++)
+            {
+                FloatingPlatforms obstacle = floatingObstacles[i];
+                if (obstacle == null)
+                    continue;
+
+                AddObstacleRoot(obstacle.gameObject);
+            }
+        }
+
+        if (autoFindClampSurfaceObstacles)
+        {
+            ClampSurface2D[] clampSurfaces = FindObjectsByType<ClampSurface2D>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            for (int i = 0; i < clampSurfaces.Length; i++)
+            {
+                ClampSurface2D surface = clampSurfaces[i];
+                if (surface == null)
+                    continue;
+
+                AddObstacleRoot(surface.gameObject);
+            }
+        }
+    }
+
+    void AddObstacleRoot(GameObject root)
+    {
+        if (root == null)
+            return;
+
+        if (cachedObstacleRoots.Contains(root))
+            return;
+
+        cachedObstacleRoots.Add(root);
+    }
+
+    void SetObstacleRootsActive(bool active)
+    {
+        for (int i = 0; i < cachedObstacleRoots.Count; i++)
+        {
+            GameObject root = cachedObstacleRoots[i];
+            if (root != null)
+                root.SetActive(active);
+        }
+    }
+
+    void ActivateObstaclesForSelectedMode()
+    {
+        if (!delayObstacleActivationUntilModeSelected)
+            return;
+
+        if (obstaclesActivatedForSession)
+            return;
+
+        SetObstacleRootsActive(true);
+        obstaclesActivatedForSession = true;
+    }
+
+    void PrepareClientObstacleActivation()
+    {
+        if (!delayObstacleActivationUntilModeSelected)
+            return;
+
+        SetObstacleRootsActive(false);
+        obstaclesActivatedForSession = false;
+        activateObstaclesOnClientConnected = true;
+    }
+
     void OnEnable()
     {
         EnsureCallbacksBound();
@@ -866,6 +983,13 @@ public class NetworkStart : MonoBehaviour
         isConnectingClient = false;
         showJoinChoiceUI = false;
         showJoinRelayUI = false;
+
+        if (activateObstaclesOnClientConnected)
+        {
+            ActivateObstaclesForSelectedMode();
+            activateObstaclesOnClientConnected = false;
+        }
+
         connectionStatus = "Connected.";
     }
 
@@ -882,6 +1006,7 @@ public class NetworkStart : MonoBehaviour
 
         isBusy = false;
         isConnectingClient = false;
+        activateObstaclesOnClientConnected = false;
         showJoinChoiceUI = true;
         showJoinRelayUI = true;
         connectionStatus = "Connection failed. Check host/join code and try again.";

@@ -13,6 +13,9 @@ public class CrabNetworkSync2D : NetworkBehaviour
     [SerializeField] bool spreadPlayersOnNetworkSpawn = true;
     [SerializeField] Vector2 networkSpawnCenter = Vector2.zero;
     [SerializeField] float networkSpawnSpacing = 6f;
+    [SerializeField] bool tossInFromAboveOnNetworkSpawn = true;
+    [SerializeField] float tossHeightAboveCamera = 4f;
+    [SerializeField] float tossInitialVerticalSpeed = 0f;
 
     readonly List<Rigidbody2D> rigidbodies = new List<Rigidbody2D>();
     readonly List<RigidbodyState> lastAppliedStates = new List<RigidbodyState>();
@@ -55,7 +58,7 @@ public class CrabNetworkSync2D : NetworkBehaviour
     {
         ResolveRigidbodies();
 
-        if (IsOwner)
+        if (IsServer)
             TryApplyInitialSpawnSpread();
 
         EnsureStateListSize();
@@ -76,14 +79,39 @@ public class CrabNetworkSync2D : NetworkBehaviour
         if (!spreadPlayersOnNetworkSpawn)
             return;
 
-        if (!IsOwner)
+        if (!IsServer)
             return;
 
         if (rigidbodies.Count == 0)
             return;
 
         float spacing = Mathf.Max(0.1f, networkSpawnSpacing);
-        Vector2 targetPosition = networkSpawnCenter + Vector2.right * GetSpawnOffsetByClientId(OwnerClientId, spacing);
+        Vector2 spawnBase = networkSpawnCenter;
+
+        if (tossInFromAboveOnNetworkSpawn)
+        {
+            Camera cam = Camera.main;
+            if (cam != null)
+            {
+                float topY;
+
+                if (cam.orthographic)
+                    topY = cam.transform.position.y + cam.orthographicSize;
+                else
+                {
+                    Vector3 topCenter = cam.ViewportToWorldPoint(new Vector3(0.5f, 1f, Mathf.Abs(cam.transform.position.z)));
+                    topY = topCenter.y;
+                }
+
+                spawnBase = new Vector2(cam.transform.position.x, topY + tossHeightAboveCamera);
+            }
+            else
+            {
+                spawnBase = new Vector2(networkSpawnCenter.x, networkSpawnCenter.y + tossHeightAboveCamera);
+            }
+        }
+
+        Vector2 targetPosition = spawnBase + Vector2.right * GetSpawnOffsetByClientId(OwnerClientId, spacing);
         Vector2 currentRootPosition = transform.position;
         Vector2 delta = targetPosition - currentRootPosition;
 
@@ -96,7 +124,7 @@ public class CrabNetworkSync2D : NetworkBehaviour
                     continue;
 
                 rb.position += delta;
-                rb.linearVelocity = Vector2.zero;
+                rb.linearVelocity = new Vector2(0f, tossInitialVerticalSpeed);
                 rb.angularVelocity = 0f;
             }
 
@@ -110,9 +138,9 @@ public class CrabNetworkSync2D : NetworkBehaviour
     {
         int pairIndex = (int)(clientId / 2);
         bool isEven = (clientId % 2) == 0;
-        float halfStep = (pairIndex + 0.5f) * spacing;
+        float fullStep = (pairIndex + 1f) * spacing;
 
-        return isEven ? -halfStep : halfStep;
+        return isEven ? -fullStep : fullStep;
     }
 
     public override void OnGainedOwnership()

@@ -14,8 +14,8 @@ public class ClawTorqueAim : MonoBehaviour
     public float damping = 6f;
 
     public float pullStrength = 10f;
-    public float liftMultiplier = 3f;   // restored
-    public float maxPullForce = 40f;
+    public float liftMultiplier = 3f;   // restored 
+    public float maxPullForce = 40f; 
 
     [Header("Idle")]
     public Vector2 idleDirection = Vector2.down;

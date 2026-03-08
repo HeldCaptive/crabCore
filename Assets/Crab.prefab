@@ -320,8 +320,8 @@ Rigidbody2D:
   m_UseFullKinematicContacts: 0
   m_UseAutoMass: 0
   m_Mass: 4
-  m_LinearDamping: 2
-  m_AngularDamping: 2
+  m_LinearDamping: 1
+  m_AngularDamping: 1
   m_GravityScale: 0
   m_Material: {fileID: 0}
   m_IncludeLayers:
@@ -711,8 +711,8 @@ Rigidbody2D:
   m_UseFullKinematicContacts: 0
   m_UseAutoMass: 0
   m_Mass: 4
-  m_LinearDamping: 2
-  m_AngularDamping: 2
+  m_LinearDamping: 1
+  m_AngularDamping: 1
   m_GravityScale: 0
   m_Material: {fileID: 0}
   m_IncludeLayers:
@@ -749,8 +749,8 @@ HingeJoint2D:
     m_MaximumMotorForce: 10000
   m_UseLimits: 0
   m_AngleLimits:
-    m_LowerAngle: -45
-    m_UpperAngle: 120
+    m_LowerAngle: 88.8
+    m_UpperAngle: -47.6
 --- !u!1 &3364848809490283501
 GameObject:
   m_ObjectHideFlags: 0
@@ -1078,8 +1078,8 @@ Rigidbody2D:
   m_UseFullKinematicContacts: 0
   m_UseAutoMass: 0
   m_Mass: 2
-  m_LinearDamping: 2
-  m_AngularDamping: 2
+  m_LinearDamping: 1
+  m_AngularDamping: 1
   m_GravityScale: 0
   m_Material: {fileID: 0}
   m_IncludeLayers:
@@ -1108,7 +1108,7 @@ HingeJoint2D:
   m_BreakAction: 3
   m_AutoConfigureConnectedAnchor: 1
   m_Anchor: {x: 0, y: 0}
-  m_ConnectedAnchor: {x: -1.5000002, y: -0.24}
+  m_ConnectedAnchor: {x: -1.5000002, y: -0.23999928}
   m_UseConnectedAnchor: 1
   m_UseMotor: 0
   m_Motor:
@@ -1285,8 +1285,8 @@ Rigidbody2D:
   m_UseFullKinematicContacts: 0
   m_UseAutoMass: 0
   m_Mass: 2
-  m_LinearDamping: 2
-  m_AngularDamping: 2
+  m_LinearDamping: 1
+  m_AngularDamping: 1
   m_GravityScale: 0
   m_Material: {fileID: 0}
   m_IncludeLayers:
@@ -1315,7 +1315,7 @@ HingeJoint2D:
   m_BreakAction: 3
   m_AutoConfigureConnectedAnchor: 1
   m_Anchor: {x: 0, y: 0}
-  m_ConnectedAnchor: {x: 1.6800003, y: -0.19000006}
+  m_ConnectedAnchor: {x: 1.68, y: -0.18999958}
   m_UseConnectedAnchor: 1
   m_UseMotor: 0
   m_Motor:
@@ -1323,7 +1323,7 @@ HingeJoint2D:
     m_MaximumMotorForce: 10000
   m_UseLimits: 0
   m_AngleLimits:
-    m_LowerAngle: 273.86
+    m_LowerAngle: 585.97
     m_UpperAngle: 438.3
 --- !u!114 &5321058270439412070
 MonoBehaviour:
@@ -1706,16 +1706,23 @@ MonoBehaviour:
   rightClaw: {fileID: 8539027936468922140}
   leftClawTip: {fileID: 3907558948008484167}
   rightClawTip: {fileID: 6705027378682398982}
-  leftClawGrabOffset: {x: 0.37, y: -0.14}
-  rightClawGrabOffset: {x: -0.23, y: -0.33}
+  leftClawGrabOffset: {x: 0.47, y: -0.27}
+  rightClawGrabOffset: {x: -0.48, y: -0.53}
   grabbableLayers:
     serializedVersion: 2
     m_Bits: 704
-  grabRadius: 0.73
+  grabRadius: 0.93
   jointFrequency: 30
   jointDampingRatio: 2
   clawLinearDamping: 10
   clawAngularDamping: 10
+  normalClampBreakForce: 100000
+  slipperyClampBreakForce: 200
+  normalClampBreakTorque: 100000
+  slipperyClampBreakTorque: 200
+  slipperyJointFrequencyScale: 0.4
+  slipperyJointDampingScale: 0.4
+  slipperySlideForce: 40
   showDebugRadius: 1
 --- !u!114 &8497678480187424313
 MonoBehaviour:
@@ -1744,7 +1751,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 3108346785
+  GlobalObjectIdHash: 232402319
   InScenePlacedSourceGlobalObjectIdHash: 232402319
   DeferredDespawnTick: 0
   Ownership: 1
@@ -1818,6 +1825,14 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   disableRemotePhysicsSimulation: 0
   interpolationLerp: 0.15
+  remotePositionCorrection: 8
+  remoteRotationCorrection: 8
+  spreadPlayersOnNetworkSpawn: 1
+  networkSpawnCenter: {x: 0, y: 0}
+  networkSpawnSpacing: 6
+  tossInFromAboveOnNetworkSpawn: 1
+  tossHeightAboveCamera: 4
+  tossInitialVerticalSpeed: 5
 --- !u!1 &8861845932022050980
 GameObject:
   m_ObjectHideFlags: 0

@@ -17,10 +17,22 @@ public class ClawGrab2D : MonoBehaviour
     [SerializeField] float jointDampingRatio = 2f;  // Over-damping for stability
     [SerializeField] float clawLinearDamping = 10f;
     [SerializeField] float clawAngularDamping = 10f;
+
+    [Header("Slippery Clamp")]
+    [SerializeField] float normalClampBreakForce = 100000f;
+    [SerializeField] float slipperyClampBreakForce = 200f;
+    [SerializeField] float normalClampBreakTorque = 100000f;
+    [SerializeField] float slipperyClampBreakTorque = 200f;
+    [SerializeField, Range(0.05f, 1f)] float slipperyJointFrequencyScale = 0.4f;
+    [SerializeField, Range(0.05f, 1f)] float slipperyJointDampingScale = 0.4f;
+    [SerializeField] float slipperySlideForce = 40f;
+
     [SerializeField] bool showDebugRadius = true;  // Toggle debug visualization
 
     FixedJoint2D leftJoint;
     FixedJoint2D rightJoint;
+    float leftJointSlipperiness;
+    float rightJointSlipperiness;
     CrabPlayerInput playerInput;
     Transform ownerRoot;
     Collider2D[] ownColliders = new Collider2D[0];
@@ -96,17 +108,17 @@ public class ClawGrab2D : MonoBehaviour
         float rightTrigger = gamepad.rightTrigger.ReadValue();
 
         if (leftTrigger > 0.5f)
-            TryGrab(leftClaw, leftClawTip, ref leftJoint, leftClawGrabOffset);
+            TryGrab(leftClaw, leftClawTip, ref leftJoint, leftClawGrabOffset, true);
         else
-            Release(ref leftJoint);
+            Release(ref leftJoint, true);
 
         if (rightTrigger > 0.5f)
-            TryGrab(rightClaw, rightClawTip, ref rightJoint, rightClawGrabOffset);
+            TryGrab(rightClaw, rightClawTip, ref rightJoint, rightClawGrabOffset, false);
         else
-            Release(ref rightJoint);
+            Release(ref rightJoint, false);
     }
 
-    void TryGrab(Rigidbody2D claw, Transform clawTip, ref FixedJoint2D joint, Vector2 grabOffset)
+    void TryGrab(Rigidbody2D claw, Transform clawTip, ref FixedJoint2D joint, Vector2 grabOffset, bool isLeftClaw)
     {
         if (claw == null || joint != null) return;
 
@@ -117,13 +129,17 @@ public class ClawGrab2D : MonoBehaviour
 
         if (hit == null) return;
 
+        float slipperiness = GetSurfaceSlipperiness(hit);
+
         joint = claw.gameObject.AddComponent<FixedJoint2D>();
         joint.enableCollision = false;
-        joint.breakForce = Mathf.Infinity;
-        joint.breakTorque = Mathf.Infinity;
-        joint.dampingRatio = jointDampingRatio;  // Over-damping prevents oscillation
-        joint.frequency = jointFrequency;     // Higher frequency = tighter constraint
+        joint.breakForce = Mathf.Lerp(normalClampBreakForce, slipperyClampBreakForce, slipperiness);
+        joint.breakTorque = Mathf.Lerp(normalClampBreakTorque, slipperyClampBreakTorque, slipperiness);
+        joint.dampingRatio = jointDampingRatio * Mathf.Lerp(1f, slipperyJointDampingScale, slipperiness);
+        joint.frequency = jointFrequency * Mathf.Lerp(1f, slipperyJointFrequencyScale, slipperiness);
         joint.autoConfigureConnectedAnchor = true;
+
+        SetJointSlipperiness(isLeftClaw, slipperiness);
 
         // Add high velocity damping to claw to prevent stretching
         claw.linearDamping = clawLinearDamping;
@@ -133,6 +149,26 @@ public class ClawGrab2D : MonoBehaviour
             joint.connectedBody = hit.attachedRigidbody;
         else
             joint.connectedBody = null;
+    }
+
+    float GetSurfaceSlipperiness(Collider2D hit)
+    {
+        if (hit == null)
+            return 0f;
+
+        ClampSurface2D clampSurface = hit.GetComponentInParent<ClampSurface2D>();
+        if (clampSurface == null)
+            return 0f;
+
+        return clampSurface.Slipperiness;
+    }
+
+    void SetJointSlipperiness(bool isLeftClaw, float slipperiness)
+    {
+        if (isLeftClaw)
+            leftJointSlipperiness = slipperiness;
+        else
+            rightJointSlipperiness = slipperiness;
     }
 
     void ConfigureCollisionBehavior()
@@ -224,7 +260,7 @@ public class ClawGrab2D : MonoBehaviour
         return candidateOwner != null && candidateOwner == playerInput;
     }
 
-    void Release(ref FixedJoint2D joint)
+    void Release(ref FixedJoint2D joint, bool isLeftClaw)
     {
         if (joint == null) return;
         // Reset damping when releasing
@@ -236,6 +272,11 @@ public class ClawGrab2D : MonoBehaviour
         }
         Destroy(joint);
         joint = null;
+
+        if (isLeftClaw)
+            leftJointSlipperiness = 0f;
+        else
+            rightJointSlipperiness = 0f;
     }
 
     void FixedUpdate()
@@ -243,6 +284,25 @@ public class ClawGrab2D : MonoBehaviour
         // Limit velocity of grabbed claws to prevent joint stretching
         ConstrainClawVelocity(leftClaw, leftJoint);
         ConstrainClawVelocity(rightClaw, rightJoint);
+
+        ApplySlipperySlide(leftClaw, leftJoint, leftJointSlipperiness);
+        ApplySlipperySlide(rightClaw, rightJoint, rightJointSlipperiness);
+    }
+
+    void ApplySlipperySlide(Rigidbody2D claw, FixedJoint2D joint, float slipperiness)
+    {
+        if (claw == null || joint == null)
+            return;
+
+        if (slipperiness <= 0f)
+            return;
+
+        Vector2 gravityDir = Physics2D.gravity.sqrMagnitude > 0.0001f
+            ? Physics2D.gravity.normalized
+            : Vector2.down;
+
+        float force = slipperySlideForce * slipperiness;
+        claw.AddForce(gravityDir * force, ForceMode2D.Force);
     }
 
     void ConstrainClawVelocity(Rigidbody2D claw, FixedJoint2D joint)

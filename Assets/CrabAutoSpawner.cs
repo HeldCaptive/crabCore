@@ -20,6 +20,13 @@ public class CrabAutoSpawner : MonoBehaviour
     [SerializeField, Min(0.1f)] float minSpawnDistance = 2.5f;
     [SerializeField, Min(1)] int maxSpawnSearchSteps = 6;
 
+    [Header("Toss-In Spawn")]
+    [SerializeField] bool useTossInSpawn = true;
+    [SerializeField] Transform tossSpawnPoint;
+    [SerializeField, Min(0f)] float tossHeightAboveCamera = 4f;
+    [SerializeField, Min(0.1f)] float tossHorizontalSpacing = 2.5f;
+    [SerializeField] float tossVerticalSpeed = 0f;
+
     readonly List<CrabPlayerInput> managedCrabs = new List<CrabPlayerInput>();
     readonly Dictionary<int, CrabPlayerInput> joinedCrabsByIndex = new Dictionary<int, CrabPlayerInput>();
     int lastKnownGamepadCount = -1;
@@ -300,6 +307,9 @@ public class CrabAutoSpawner : MonoBehaviour
 
     Vector3 GetSpawnPosition(int playerIndex)
     {
+        if (useTossInSpawn)
+            return FindClearSpawnPosition(GetTossSpawnPosition(playerIndex));
+
         Vector3 basePosition;
 
         if (spawnPoints != null && spawnPoints.Length > 0)
@@ -313,6 +323,46 @@ public class CrabAutoSpawner : MonoBehaviour
         }
 
         return FindClearSpawnPosition(basePosition);
+    }
+
+    Vector3 GetTossSpawnPosition(int playerIndex)
+    {
+        if (tossSpawnPoint != null)
+        {
+            float xOffset = GetCenteredHorizontalOffset(playerIndex, tossHorizontalSpacing);
+            return tossSpawnPoint.position + Vector3.right * xOffset;
+        }
+
+        Camera cam = Camera.main;
+        if (cam != null)
+        {
+            float centerX = cam.transform.position.x;
+            float topY;
+
+            if (cam.orthographic)
+                topY = cam.transform.position.y + cam.orthographicSize;
+            else
+            {
+                Vector3 topCenter = cam.ViewportToWorldPoint(new Vector3(0.5f, 1f, Mathf.Abs(cam.transform.position.z)));
+                topY = topCenter.y;
+            }
+
+            float xOffset = GetCenteredHorizontalOffset(playerIndex, tossHorizontalSpacing);
+            return new Vector3(centerX + xOffset, topY + tossHeightAboveCamera, transform.position.z);
+        }
+
+        return transform.position + Vector3.up * tossHeightAboveCamera + Vector3.right * GetCenteredHorizontalOffset(playerIndex, tossHorizontalSpacing);
+    }
+
+    float GetCenteredHorizontalOffset(int playerIndex, float spacing)
+    {
+        float effectiveSpacing = spacing > 0.001f
+            ? spacing
+            : Mathf.Max(0.1f, fallbackSpacing);
+
+        float slot = (playerIndex / 2) + 1f;
+        float direction = (playerIndex % 2 == 0) ? -1f : 1f;
+        return slot * direction * effectiveSpacing;
     }
 
     Vector3 FindClearSpawnPosition(Vector3 desiredPosition)
@@ -375,6 +425,9 @@ public class CrabAutoSpawner : MonoBehaviour
 
             rb.linearVelocity = Vector2.zero;
             rb.angularVelocity = 0f;
+
+            if (useTossInSpawn)
+                rb.linearVelocity = new Vector2(rb.linearVelocity.x, tossVerticalSpeed);
         }
     }
 }
