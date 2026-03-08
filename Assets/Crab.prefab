@@ -1108,7 +1108,7 @@ HingeJoint2D:
   m_BreakAction: 3
   m_AutoConfigureConnectedAnchor: 1
   m_Anchor: {x: 0, y: 0}
-  m_ConnectedAnchor: {x: -1.5000002, y: -0.23999928}
+  m_ConnectedAnchor: {x: -1.5000002, y: -0.24000002}
   m_UseConnectedAnchor: 1
   m_UseMotor: 0
   m_Motor:
@@ -1315,7 +1315,7 @@ HingeJoint2D:
   m_BreakAction: 3
   m_AutoConfigureConnectedAnchor: 1
   m_Anchor: {x: 0, y: 0}
-  m_ConnectedAnchor: {x: 1.68, y: -0.18999958}
+  m_ConnectedAnchor: {x: 1.68, y: -0.19}
   m_UseConnectedAnchor: 1
   m_UseMotor: 0
   m_Motor:
@@ -1681,8 +1681,8 @@ Transform:
   m_GameObject: {fileID: 8184623766109925514}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -16.03, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 2, y: 2, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 8113984556984888683}
@@ -1711,7 +1711,7 @@ MonoBehaviour:
   grabbableLayers:
     serializedVersion: 2
     m_Bits: 704
-  grabRadius: 0.93
+  grabRadius: 1.44
   jointFrequency: 30
   jointDampingRatio: 2
   clawLinearDamping: 10
@@ -1832,7 +1832,14 @@ MonoBehaviour:
   networkSpawnSpacing: 6
   tossInFromAboveOnNetworkSpawn: 1
   tossHeightAboveCamera: 4
-  tossInitialVerticalSpeed: 5
+  tossInitialVerticalSpeed: 50
+  tossTowardGround: 1
+  enforceOwnerTossFrames: 50
+  preferSceneSpawnZone: 1
+  sceneSpawnZoneName: CrabSpawnZone
+  requireSceneSpawnZone: 1
+  preferSceneTossSpawnPoint: 1
+  sceneTossSpawnPointName: TossSpawn
 --- !u!1 &8861845932022050980
 GameObject:
   m_ObjectHideFlags: 0

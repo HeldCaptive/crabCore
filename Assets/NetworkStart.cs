@@ -8,11 +8,23 @@ using Unity.Services.Authentication;
 using Unity.Services.Core;
 using Unity.Services.Relay;
 using Unity.Services.Relay.Models;
+using Unity.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 public class NetworkStart : MonoBehaviour
 {
+    [Header("Network Limits")]
+    [SerializeField, Min(2)] int maxTotalRelayPlayers = 16;
+
+    [Header("Match Flow")]
+    [SerializeField] bool requireHostStartForCoordinatedInitialSpawn = true;
+    [SerializeField] bool showHostLobbyPanel = true;
+
+    [Header("Diagnostics")]
+    [SerializeField] bool showAuditConsole = false;
+    [SerializeField, Min(4)] int auditLineCount = 12;
+
     [Header("Obstacle Loading")]
     [SerializeField] bool delayObstacleActivationUntilModeSelected = true;
     [SerializeField] bool autoFindFloatingObstacles = true;
@@ -25,6 +37,9 @@ public class NetworkStart : MonoBehaviour
     bool showJoinChoiceUI;
     bool showJoinRelayUI;
     bool showJoinCodeUI;
+    bool showInGamePauseMenu;
+    bool returningToMainMenu;
+    bool returnShutdownRequested;
 
     string joinCodeInput = "";
     string activeJoinCode = "";
@@ -55,24 +70,54 @@ public class NetworkStart : MonoBehaviour
     readonly List<GameObject> cachedObstacleRoots = new List<GameObject>();
     bool obstaclesActivatedForSession;
     bool activateObstaclesOnClientConnected;
+    readonly Queue<string> auditEntries = new Queue<string>();
+    float nextMatchStateBroadcastTime;
+    bool hasReceivedMatchStateMessage;
+    bool lastReceivedMatchStarted;
+
+    const string MatchStateMessageName = "NetworkStart_MatchState";
+    static bool matchStateHandlerRegistered;
+    static NetworkManager matchStateHandlerOwner;
+    static bool isMatchStarted = true;
+    static bool delayInitialSpawnUntilHostStart;
+
+    public static bool IsMatchStarted => isMatchStarted;
+    public static bool DelayInitialSpawnUntilHostStart => delayInitialSpawnUntilHostStart;
 
     void Awake()
     {
+        delayInitialSpawnUntilHostStart = requireHostStartForCoordinatedInitialSpawn;
+        isMatchStarted = !requireHostStartForCoordinatedInitialSpawn;
+
         CacheObstacleRoots();
 
         if (delayObstacleActivationUntilModeSelected)
             SetObstacleRootsActive(false);
+
+        Audit($"Boot: match gate {(requireHostStartForCoordinatedInitialSpawn ? "enabled" : "disabled")}");
     }
 
     void Update()
     {
         EnsureCallbacksBound();
+        TryRegisterMatchStateMessageHandler();
+
+        if (returningToMainMenu)
+            ProcessReturnToMainMenu();
 
         if (NetworkManager.Singleton == null)
             return;
 
+        if (NetworkManager.Singleton.IsServer
+            && NetworkManager.Singleton.IsListening
+            && Time.unscaledTime >= nextMatchStateBroadcastTime)
+        {
+            BroadcastMatchStateToAll(isMatchStarted);
+            nextMatchStateBroadcastTime = Time.unscaledTime + 1f;
+        }
+
         // Hide main menu once connected
-        if (NetworkManager.Singleton.IsListening)
+        if (NetworkManager.Singleton.IsListening && !returningToMainMenu)
         {
             showMainMenu = false;
         }
@@ -80,9 +125,37 @@ public class NetworkStart : MonoBehaviour
         // Handle controller navigation
         HandleControllerInput();
 
+        if (Keyboard.current != null
+            && ((Keyboard.current.digit9Key != null && Keyboard.current.digit9Key.wasPressedThisFrame)
+                || (Keyboard.current.numpad9Key != null && Keyboard.current.numpad9Key.wasPressedThisFrame)))
+        {
+            showAuditConsole = !showAuditConsole;
+
+            if (showAuditConsole)
+                Audit("Audit console enabled (key 9).");
+        }
+
         // ESC or B button to go back
         bool backPressed = (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame) ||
                            (Gamepad.current != null && Gamepad.current.buttonEast.wasPressedThisFrame);
+
+        if (showInGamePauseMenu)
+        {
+            if (backPressed)
+            {
+                showInGamePauseMenu = false;
+                selectedIndex = 0;
+            }
+
+            return;
+        }
+
+        if (CanOpenInGamePauseMenu() && backPressed)
+        {
+            showInGamePauseMenu = true;
+            selectedIndex = 0;
+            return;
+        }
 
         if ((showHostUI || showHostCodeReadyUI || showJoinChoiceUI || showJoinRelayUI) && backPressed)
         {
@@ -153,9 +226,26 @@ public class NetworkStart : MonoBehaviour
 
     void ConfirmSelection()
     {
-        if (showMainMenu)
+        if (showInGamePauseMenu)
         {
             selectedIndex = Mathf.Clamp(selectedIndex, 0, 1);
+
+            if (selectedIndex == 0)
+            {
+                showInGamePauseMenu = false;
+                selectedIndex = 0;
+            }
+            else
+            {
+                ReturnToHostJoinMenu();
+            }
+
+            return;
+        }
+
+        if (showMainMenu)
+        {
+            selectedIndex = Mathf.Clamp(selectedIndex, 0, 2);
             if (selectedIndex == 0) // Host
             {
                 showMainMenu = false;
@@ -172,18 +262,20 @@ public class NetworkStart : MonoBehaviour
                 if (!string.IsNullOrEmpty(GUIUtility.systemCopyBuffer))
                     joinCodeInput = GUIUtility.systemCopyBuffer.Trim();
             }
+            else if (selectedIndex == 2) // Exit Game
+            {
+                ExitGameFromMainMenu();
+            }
         }
         else if (showHostUI)
         {
-            selectedIndex = Mathf.Clamp(selectedIndex, 0, 2);
-            if (selectedIndex == 0) // Quick Local
-                StartQuickLocalHost();
-            else if (selectedIndex == 1) // Relay - generate code but don't start yet
+            selectedIndex = Mathf.Clamp(selectedIndex, 0, 1);
+            if (selectedIndex == 0) // Relay - generate code but don't start yet
             {
                 if (!isBusy)
                     _ = GenerateRelayCodeAsync();
             }
-            else if (selectedIndex == 2) // Back
+            else if (selectedIndex == 1) // Back
             {
                 showHostUI = false;
                 showMainMenu = true;
@@ -211,10 +303,8 @@ public class NetworkStart : MonoBehaviour
         }
         else if (showJoinChoiceUI)
         {
-            selectedIndex = Mathf.Clamp(selectedIndex, 0, 2);
-            if (selectedIndex == 0) // Quick Local
-                StartQuickLocalClient();
-            else if (selectedIndex == 1) // Join Relay
+            selectedIndex = Mathf.Clamp(selectedIndex, 0, 1);
+            if (selectedIndex == 0) // Join Relay
             {
                 showJoinChoiceUI = false;
                 showJoinRelayUI = true;
@@ -222,7 +312,7 @@ public class NetworkStart : MonoBehaviour
                 if (!isConnectingClient)
                     connectionStatus = "";
             }
-            else if (selectedIndex == 2) // Back
+            else if (selectedIndex == 1) // Back
             {
                 showJoinChoiceUI = false;
                 showMainMenu = true;
@@ -271,14 +361,135 @@ public class NetworkStart : MonoBehaviour
 
         if (showJoinCodeUI && !string.IsNullOrEmpty(activeJoinCode))
             DrawJoinCodeOverlay();
+
+        DrawHostLobbyPanelIfNeeded();
+        DrawAuditConsoleIfNeeded();
+
+        if (showInGamePauseMenu)
+            DrawInGamePauseMenu();
+    }
+
+    bool CanOpenInGamePauseMenu()
+    {
+        if (returningToMainMenu)
+            return false;
+
+        if (showMainMenu || showHostUI || showHostCodeReadyUI || showJoinChoiceUI || showJoinRelayUI)
+            return false;
+
+        NetworkManager manager = NetworkManager.Singleton;
+        return manager != null && manager.IsListening;
+    }
+
+    void DrawInGamePauseMenu()
+    {
+        selectedIndex = Mathf.Clamp(selectedIndex, 0, 1);
+
+        float width = 360f;
+        float height = 190f;
+        Rect rect = new Rect((Screen.width - width) * 0.5f, (Screen.height - height) * 0.5f, width, height);
+
+        GUI.Box(rect, "");
+        GUILayout.BeginArea(rect);
+        GUILayout.BeginVertical();
+
+        GUILayout.Space(10);
+        GUILayout.Label("Paused", GUI.skin.label);
+        GUILayout.Label("ESC/B = Resume", statusStyle);
+        GUILayout.Space(14);
+
+        if (GUILayout.Button("Resume", selectedIndex == 0 ? selectedButtonStyle : bigButtonStyle, GUILayout.Height(45)))
+        {
+            showInGamePauseMenu = false;
+            selectedIndex = 0;
+        }
+
+        GUILayout.Space(8);
+
+        if (GUILayout.Button("Return to Host / Join Menu", selectedIndex == 1 ? selectedButtonStyle : bigButtonStyle, GUILayout.Height(45)))
+            ReturnToHostJoinMenu();
+
+        GUILayout.EndVertical();
+        GUILayout.EndArea();
+    }
+
+    void ReturnToHostJoinMenu()
+    {
+        returningToMainMenu = true;
+        returnShutdownRequested = false;
+
+        showInGamePauseMenu = false;
+        showMainMenu = true;
+        showHostUI = false;
+        showHostCodeReadyUI = false;
+        showJoinChoiceUI = false;
+        showJoinRelayUI = false;
+        showJoinCodeUI = false;
+
+        selectedIndex = 0;
+        isBusy = false;
+        isConnectingClient = false;
+        connectionStatus = "";
+        activeJoinCode = "";
+        hostJoinCode = "";
+        relayAllocation = null;
+
+        activateObstaclesOnClientConnected = false;
+
+        if (delayObstacleActivationUntilModeSelected)
+        {
+            SetObstacleRootsActive(false);
+            obstaclesActivatedForSession = false;
+        }
+
+        hasReceivedMatchStateMessage = false;
+        delayInitialSpawnUntilHostStart = requireHostStartForCoordinatedInitialSpawn;
+        isMatchStarted = !requireHostStartForCoordinatedInitialSpawn;
+
+        Audit("Returned to Host/Join menu from pause menu.");
+    }
+
+    void ExitGameFromMainMenu()
+    {
+        Audit("Exit Game selected from main menu.");
+
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
+#else
+        Application.Quit();
+#endif
+    }
+
+    void ProcessReturnToMainMenu()
+    {
+        NetworkManager manager = NetworkManager.Singleton;
+
+        if (!returnShutdownRequested && manager != null && manager.IsListening)
+        {
+            manager.Shutdown();
+            returnShutdownRequested = true;
+        }
+
+        showMainMenu = true;
+        showHostUI = false;
+        showHostCodeReadyUI = false;
+        showJoinChoiceUI = false;
+        showJoinRelayUI = false;
+        showJoinCodeUI = false;
+        showInGamePauseMenu = false;
+
+        if (manager != null && manager.IsListening)
+            return;
+
+        returningToMainMenu = false;
     }
 
     void DrawMainMenu()
     {
-        selectedIndex = Mathf.Clamp(selectedIndex, 0, 1);
+        selectedIndex = Mathf.Clamp(selectedIndex, 0, 2);
         
         float width = 350f;
-        float height = 200f;
+        float height = 270f;
         Rect rect = new Rect((Screen.width - width) * 0.5f, (Screen.height - height) * 0.5f, width, height);
 
         GUI.Box(rect, "");
@@ -309,29 +520,29 @@ public class NetworkStart : MonoBehaviour
                 joinCodeInput = GUIUtility.systemCopyBuffer.Trim();
         }
 
+        GUILayout.Space(10);
+
+        if (GUILayout.Button("Exit Game", selectedIndex == 2 ? selectedButtonStyle : bigButtonStyle, GUILayout.Height(50)))
+            ExitGameFromMainMenu();
+
         GUILayout.EndVertical();
         GUILayout.EndArea();
     }
 
     void DrawHostMenu()
     {
-        selectedIndex = Mathf.Clamp(selectedIndex, 0, 2);
+        selectedIndex = Mathf.Clamp(selectedIndex, 0, 1);
         
         float width = 420f;
-        float height = 210f;
+        float height = 170f;
         Rect rect = new Rect((Screen.width - width) * 0.5f, (Screen.height - height) * 0.5f, width, height);
 
         GUI.Box(rect, "");
         GUILayout.BeginArea(rect);
         GUILayout.BeginVertical();
         GUILayout.Space(10);
-        GUILayout.Label("Host - Choose Type", GUI.skin.label);
+        GUILayout.Label("Host", GUI.skin.label);
         GUILayout.Space(10);
-
-        if (GUILayout.Button("Quick Test Local\nStart host on this machine", selectedIndex == 0 ? selectedButtonStyle : bigButtonStyle, GUILayout.Height(50)))
-            StartQuickLocalHost();
-
-        GUILayout.Space(5);
 
         if (GUILayout.Button(isBusy ? "Generating Join Code..." : "External (Relay Join Code)\nNo port forwarding needed", selectedIndex == 1 ? selectedButtonStyle : bigButtonStyle, GUILayout.Height(50)))
         {
@@ -340,7 +551,7 @@ public class NetworkStart : MonoBehaviour
         }
 
         GUILayout.Space(10);
-        if (GUILayout.Button("Back (ESC)", selectedIndex == 2 ? selectedButtonStyle : buttonStyle, GUILayout.Height(25)))
+        if (GUILayout.Button("Back (ESC)", selectedIndex == 1 ? selectedButtonStyle : buttonStyle, GUILayout.Height(25)))
         {
             showHostUI = false;
             showMainMenu = true;
@@ -402,23 +613,18 @@ public class NetworkStart : MonoBehaviour
 
     void DrawJoinChoiceMenu()
     {
-        selectedIndex = Mathf.Clamp(selectedIndex, 0, 2);
+        selectedIndex = Mathf.Clamp(selectedIndex, 0, 1);
         
         float width = 430f;
-        float height = 210f;
+        float height = 170f;
         Rect rect = new Rect((Screen.width - width) * 0.5f, (Screen.height - height) * 0.5f, width, height);
 
         GUI.Box(rect, "");
         GUILayout.BeginArea(rect);
         GUILayout.BeginVertical();
         GUILayout.Space(10);
-        GUILayout.Label("Join - Choose Type", GUI.skin.label);
+        GUILayout.Label("Join", GUI.skin.label);
         GUILayout.Space(10);
-
-        if (GUILayout.Button("Quick Connect Local\nConnect to 127.0.0.1:7777", selectedIndex == 0 ? selectedButtonStyle : bigButtonStyle, GUILayout.Height(50)))
-            StartQuickLocalClient();
-
-        GUILayout.Space(5);
 
         if (GUILayout.Button("Join External (Relay Code)\nEnter code from host", selectedIndex == 1 ? selectedButtonStyle : bigButtonStyle, GUILayout.Height(50)))
         {
@@ -430,7 +636,7 @@ public class NetworkStart : MonoBehaviour
         }
 
         GUILayout.Space(10);
-        if (GUILayout.Button("Back (ESC)", selectedIndex == 2 ? selectedButtonStyle : buttonStyle, GUILayout.Height(25)))
+        if (GUILayout.Button("Back (ESC)", selectedIndex == 1 ? selectedButtonStyle : buttonStyle, GUILayout.Height(25)))
         {
             showJoinChoiceUI = false;
             showMainMenu = true;
@@ -518,6 +724,225 @@ public class NetworkStart : MonoBehaviour
         GUILayout.EndArea();
     }
 
+    void DrawHostLobbyPanelIfNeeded()
+    {
+        if (!showHostLobbyPanel)
+            return;
+
+        NetworkManager manager = NetworkManager.Singleton;
+        if (manager == null || !manager.IsListening || !manager.IsServer)
+            return;
+
+        if (!requireHostStartForCoordinatedInitialSpawn || isMatchStarted)
+            return;
+
+        float width = 360f;
+        float height = 220f;
+        Rect rect = new Rect(Screen.width - width - 20f, 20f, width, height);
+
+        GUI.Box(rect, "");
+        GUILayout.BeginArea(rect);
+        GUILayout.BeginVertical();
+
+        GUILayout.Space(6);
+        GUILayout.Label("Lobby (Host)", GUI.skin.label);
+        int connectedCount = manager.ConnectedClientsIds.Count;
+        GUILayout.Label($"Connected Players: {connectedCount}", statusStyle);
+        GUILayout.Label("Press Start Game when current players are ready.", statusStyle);
+
+        GUILayout.Space(6);
+        GUILayout.Label("Client IDs:", statusStyle);
+        int shown = 0;
+        foreach (ulong id in manager.ConnectedClientsIds)
+        {
+            if (shown >= 6)
+                break;
+
+            GUILayout.Label($"- {id}", statusStyle);
+            shown++;
+        }
+
+        GUILayout.FlexibleSpace();
+        if (GUILayout.Button("Start Game (Spawn Connected Players)", bigButtonStyle, GUILayout.Height(36f)))
+            StartGameFromHost();
+
+        GUILayout.EndVertical();
+        GUILayout.EndArea();
+    }
+
+    void DrawAuditConsoleIfNeeded()
+    {
+        if (!showAuditConsole)
+            return;
+
+        float width = 520f;
+        float height = 220f;
+        Rect rect = new Rect(20f, Screen.height - height - 20f, width, height);
+
+        GUI.Box(rect, "");
+        GUILayout.BeginArea(rect);
+        GUILayout.BeginVertical();
+
+        NetworkManager manager = NetworkManager.Singleton;
+        string role = "Offline";
+        int connected = 0;
+
+        if (manager != null && manager.IsListening)
+        {
+            if (manager.IsServer)
+                role = "Host";
+            else if (manager.IsClient)
+                role = "Client";
+
+            connected = manager.ConnectedClientsIds.Count;
+        }
+
+        GUILayout.Label($"Audit Console | Role: {role} | MatchStarted: {isMatchStarted} | Connected: {connected}", statusStyle);
+        GUILayout.Space(4f);
+
+        foreach (string entry in auditEntries)
+            GUILayout.Label(entry, statusStyle);
+
+        GUILayout.EndVertical();
+        GUILayout.EndArea();
+    }
+
+    void StartGameFromHost()
+    {
+        NetworkManager manager = NetworkManager.Singleton;
+        if (manager == null || !manager.IsListening || !manager.IsServer)
+            return;
+
+        if (isMatchStarted)
+            return;
+
+        isMatchStarted = true;
+        BroadcastMatchStateToAll(isMatchStarted);
+        TriggerCoordinatedSpawnForConnectedPlayers();
+        Audit("Host pressed Start Game. Spawn wave triggered for connected players.");
+    }
+
+    void TriggerCoordinatedSpawnForConnectedPlayers()
+    {
+        NetworkManager manager = NetworkManager.Singleton;
+        if (manager == null || !manager.IsListening || !manager.IsServer)
+            return;
+
+        CrabNetworkSync2D[] crabs = FindObjectsByType<CrabNetworkSync2D>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        int triggered = 0;
+
+        for (int i = 0; i < crabs.Length; i++)
+        {
+            CrabNetworkSync2D crab = crabs[i];
+            if (crab == null || !crab.IsSpawned)
+                continue;
+
+            bool ownerIsConnected = false;
+            for (int clientIndex = 0; clientIndex < manager.ConnectedClientsIds.Count; clientIndex++)
+            {
+                if (manager.ConnectedClientsIds[clientIndex] != crab.OwnerClientId)
+                    continue;
+
+                ownerIsConnected = true;
+                break;
+            }
+
+            if (!ownerIsConnected)
+                continue;
+
+            crab.TriggerCoordinatedSpawnFromHost();
+            triggered++;
+        }
+
+        Audit($"Coordinated spawn sent to {triggered} crabs.");
+    }
+
+    void OnHostStartedSuccessfully()
+    {
+        if (requireHostStartForCoordinatedInitialSpawn)
+        {
+            isMatchStarted = false;
+            Audit("Host online. Waiting for Start Game to spawn connected players.");
+        }
+        else
+        {
+            isMatchStarted = true;
+            Audit("Host online. Immediate spawn mode active.");
+        }
+
+        TryRegisterMatchStateMessageHandler();
+        BroadcastMatchStateToAll(isMatchStarted);
+    }
+
+    void BroadcastMatchStateToAll(bool started)
+    {
+        NetworkManager manager = NetworkManager.Singleton;
+        if (manager == null || !manager.IsServer || !manager.IsListening || manager.CustomMessagingManager == null)
+            return;
+
+        using var writer = new FastBufferWriter(sizeof(byte), Allocator.Temp);
+        writer.WriteValueSafe(started);
+        manager.CustomMessagingManager.SendNamedMessageToAll(MatchStateMessageName, writer, NetworkDelivery.ReliableSequenced);
+    }
+
+    void TryRegisterMatchStateMessageHandler()
+    {
+        NetworkManager manager = NetworkManager.Singleton;
+        if (manager == null || manager.CustomMessagingManager == null)
+            return;
+
+        if (matchStateHandlerRegistered && matchStateHandlerOwner == manager)
+            return;
+
+        if (matchStateHandlerRegistered && matchStateHandlerOwner != null && matchStateHandlerOwner.CustomMessagingManager != null)
+            matchStateHandlerOwner.CustomMessagingManager.UnregisterNamedMessageHandler(MatchStateMessageName);
+
+        manager.CustomMessagingManager.RegisterNamedMessageHandler(MatchStateMessageName, OnMatchStateMessageReceived);
+        matchStateHandlerRegistered = true;
+        matchStateHandlerOwner = manager;
+    }
+
+    void UnregisterMatchStateMessageHandler()
+    {
+        if (!matchStateHandlerRegistered)
+            return;
+
+        if (matchStateHandlerOwner != null && matchStateHandlerOwner.CustomMessagingManager != null)
+            matchStateHandlerOwner.CustomMessagingManager.UnregisterNamedMessageHandler(MatchStateMessageName);
+
+        matchStateHandlerRegistered = false;
+        matchStateHandlerOwner = null;
+    }
+
+    void OnMatchStateMessageReceived(ulong senderClientId, FastBufferReader reader)
+    {
+        reader.ReadValueSafe(out bool started);
+        isMatchStarted = started;
+
+        bool hasChanged = !hasReceivedMatchStateMessage || lastReceivedMatchStarted != started;
+        hasReceivedMatchStateMessage = true;
+        lastReceivedMatchStarted = started;
+
+        if (!hasChanged)
+            return;
+
+        if (started)
+            Audit($"Match state update from {senderClientId}: STARTED");
+        else
+            Audit($"Match state update from {senderClientId}: WAITING");
+    }
+
+    void Audit(string message)
+    {
+        string entry = $"[{DateTime.Now:HH:mm:ss}] {message}";
+        auditEntries.Enqueue(entry);
+
+        while (auditEntries.Count > Mathf.Max(4, auditLineCount))
+            auditEntries.Dequeue();
+
+        Debug.Log($"[NetworkStart] {entry}");
+    }
+
     void StartQuickLocalHost()
     {
         if (NetworkManager.Singleton == null)
@@ -541,7 +966,13 @@ public class NetworkStart : MonoBehaviour
 
         bool started = NetworkManager.Singleton.StartHost();
         if (!started)
+        {
             connectionStatus = "Failed to start local host. Port 7777 may already be in use.";
+            return;
+        }
+
+        OnHostStartedSuccessfully();
+        Audit("Quick local host started.");
     }
 
     void StartQuickLocalClient()
@@ -558,6 +989,7 @@ public class NetworkStart : MonoBehaviour
             return;
 
         PrepareClientObstacleActivation();
+        isMatchStarted = !requireHostStartForCoordinatedInitialSpawn;
 
         UnityTransport transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
         if (transport == null)
@@ -583,6 +1015,7 @@ public class NetworkStart : MonoBehaviour
         isBusy = true;
         connectStartTime = Time.unscaledTime;
         connectionStatus = "Trying local connection...";
+        Audit($"Local client connection started -> {address}:7777");
     }
 
     async Task StartRelayHostAsync()
@@ -606,7 +1039,7 @@ public class NetworkStart : MonoBehaviour
                 return;
             }
 
-            const int maxConnections = 3;
+            int maxConnections = Mathf.Max(1, maxTotalRelayPlayers - 1);
             Allocation allocation = await RelayService.Instance.CreateAllocationAsync(maxConnections);
             string joinCode = await RelayService.Instance.GetJoinCodeAsync(allocation.AllocationId);
 
@@ -619,10 +1052,13 @@ public class NetworkStart : MonoBehaviour
                 return;
             }
 
+            OnHostStartedSuccessfully();
+
             activeJoinCode = joinCode;
             showJoinCodeUI = true;
             showHostUI = false;
             connectionStatus = "Relay host started.";
+            Audit($"Relay host started with join code {joinCode}");
         }
         catch (Exception ex)
         {
@@ -655,7 +1091,7 @@ public class NetworkStart : MonoBehaviour
                 return;
             }
 
-            const int maxConnections = 3;
+            int maxConnections = Mathf.Max(1, maxTotalRelayPlayers - 1);
             relayAllocation = await RelayService.Instance.CreateAllocationAsync(maxConnections);
             hostJoinCode = await RelayService.Instance.GetJoinCodeAsync(relayAllocation.AllocationId);
 
@@ -704,8 +1140,11 @@ public class NetworkStart : MonoBehaviour
                 return;
             }
 
+            OnHostStartedSuccessfully();
+
             showHostCodeReadyUI = false;
             connectionStatus = "Relay host started!";
+            Audit($"Relay host started with prepared join code {hostJoinCode}");
         }
         catch (Exception ex)
         {
@@ -726,6 +1165,7 @@ public class NetworkStart : MonoBehaviour
             return;
 
         PrepareClientObstacleActivation();
+        isMatchStarted = !requireHostStartForCoordinatedInitialSpawn;
 
         isBusy = true;
         isConnectingClient = false;
@@ -764,6 +1204,7 @@ public class NetworkStart : MonoBehaviour
             isConnectingClient = true;
             connectStartTime = Time.unscaledTime;
             connectionStatus = "Trying to connect via Relay...";
+            Audit($"Relay client connection started using code {joinCodeInput}");
         }
         catch (Exception ex)
         {
@@ -954,6 +1395,8 @@ public class NetworkStart : MonoBehaviour
 
     void OnDisable()
     {
+        UnregisterMatchStateMessageHandler();
+
         if (!callbacksBound || NetworkManager.Singleton == null)
             return;
 
@@ -977,8 +1420,16 @@ public class NetworkStart : MonoBehaviour
         if (NetworkManager.Singleton == null)
             return;
 
+        if (NetworkManager.Singleton.IsServer)
+        {
+            Audit($"Client connected: {clientId}. Connected total: {NetworkManager.Singleton.ConnectedClientsIds.Count}");
+            BroadcastMatchStateToAll(isMatchStarted);
+        }
+
         if (clientId != NetworkManager.Singleton.LocalClientId)
             return;
+
+        TryRegisterMatchStateMessageHandler();
 
         isBusy = false;
         isConnectingClient = false;
@@ -992,6 +1443,7 @@ public class NetworkStart : MonoBehaviour
         }
 
         connectionStatus = "Connected.";
+        Audit("Local client connected.");
     }
 
     void OnClientDisconnected(ulong clientId)
@@ -999,11 +1451,30 @@ public class NetworkStart : MonoBehaviour
         if (NetworkManager.Singleton == null)
             return;
 
-        if (clientId != NetworkManager.Singleton.LocalClientId)
+        NetworkManager manager = NetworkManager.Singleton;
+
+        if (manager.IsServer)
+            Audit($"Client disconnected: {clientId}. Connected total: {manager.ConnectedClientsIds.Count}");
+
+        bool isRemoteClientWhoseHostDisconnected = !manager.IsServer && manager.IsClient && clientId == NetworkManager.ServerClientId;
+        if (isRemoteClientWhoseHostDisconnected)
+        {
+            ReturnToHostJoinMenu();
+            connectionStatus = "Host disconnected. Returned to Host/Join menu.";
+            Audit("Host disconnected. Returning local client to Host/Join menu.");
+            return;
+        }
+
+        if (clientId != manager.LocalClientId)
             return;
 
         if (!isConnectingClient)
+        {
+            ReturnToHostJoinMenu();
+            connectionStatus = "Disconnected. Returned to Host/Join menu.";
+            Audit("Local client disconnected. Returned to Host/Join menu.");
             return;
+        }
 
         isBusy = false;
         isConnectingClient = false;
@@ -1011,6 +1482,7 @@ public class NetworkStart : MonoBehaviour
         showJoinChoiceUI = true;
         showJoinRelayUI = true;
         connectionStatus = "Connection failed. Check host/join code and try again.";
+        Audit("Local client disconnected during connection flow.");
     }
 
     void OnApplicationQuit()
@@ -1022,6 +1494,9 @@ public class NetworkStart : MonoBehaviour
     void OnDestroy()
     {
         OnDisable();
+
+        isMatchStarted = !requireHostStartForCoordinatedInitialSpawn;
+
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
             NetworkManager.Singleton.Shutdown();
     }

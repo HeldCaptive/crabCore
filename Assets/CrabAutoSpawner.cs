@@ -15,7 +15,7 @@ public class CrabAutoSpawner : MonoBehaviour
 
     [Header("Spawn")]
     [SerializeField] Transform[] spawnPoints;
-    [SerializeField, Min(1)] int maxPlayers = 4;
+    [SerializeField] int maxPlayers = 0;
     [SerializeField] float fallbackSpacing = 3f;
     [SerializeField, Min(0.1f)] float minSpawnDistance = 2.5f;
     [SerializeField, Min(1)] int maxSpawnSearchSteps = 6;
@@ -25,7 +25,6 @@ public class CrabAutoSpawner : MonoBehaviour
     [SerializeField] Transform tossSpawnPoint;
     [SerializeField, Min(0f)] float tossHeightAboveCamera = 4f;
     [SerializeField, Min(0.1f)] float tossHorizontalSpacing = 2.5f;
-    [SerializeField] float tossVerticalSpeed = 0f;
 
     readonly List<CrabPlayerInput> managedCrabs = new List<CrabPlayerInput>();
     readonly Dictionary<int, CrabPlayerInput> joinedCrabsByIndex = new Dictionary<int, CrabPlayerInput>();
@@ -93,7 +92,7 @@ public class CrabAutoSpawner : MonoBehaviour
 
         managedCrabs.RemoveAll(c => c == null);
 
-        int targetPlayers = Mathf.Min(Gamepad.all.Count, maxPlayers);
+        int targetPlayers = Mathf.Min(Gamepad.all.Count, GetMaxPlayers());
         lastKnownGamepadCount = Gamepad.all.Count;
 
         for (int i = 0; i < targetPlayers; i++)
@@ -176,7 +175,7 @@ public class CrabAutoSpawner : MonoBehaviour
                 DisableMissingControllerCrabs();
         }
 
-        int count = Mathf.Min(Gamepad.all.Count, maxPlayers);
+        int count = Mathf.Min(Gamepad.all.Count, GetMaxPlayers());
 
         for (int i = 0; i < count; i++)
         {
@@ -305,6 +304,14 @@ public class CrabAutoSpawner : MonoBehaviour
             || !NetworkManager.Singleton.IsListening;
     }
 
+    int GetMaxPlayers()
+    {
+        if (maxPlayers <= 0)
+            return int.MaxValue;
+
+        return maxPlayers;
+    }
+
     Vector3 GetSpawnPosition(int playerIndex)
     {
         if (useTossInSpawn)
@@ -415,6 +422,7 @@ public class CrabAutoSpawner : MonoBehaviour
             return;
 
         crab.transform.position = GetSpawnPosition(playerIndex);
+        float tossSpeed = GetUnifiedTossVerticalSpeed(crab);
 
         Rigidbody2D[] rigidbodies = crab.GetComponentsInChildren<Rigidbody2D>(true);
         for (int i = 0; i < rigidbodies.Length; i++)
@@ -427,7 +435,23 @@ public class CrabAutoSpawner : MonoBehaviour
             rb.angularVelocity = 0f;
 
             if (useTossInSpawn)
-                rb.linearVelocity = new Vector2(rb.linearVelocity.x, tossVerticalSpeed);
+                rb.linearVelocity = new Vector2(rb.linearVelocity.x, tossSpeed);
         }
+    }
+
+    float GetUnifiedTossVerticalSpeed(CrabPlayerInput crab)
+    {
+        CrabNetworkSync2D crabSync = null;
+
+        if (crab != null)
+            crabSync = crab.GetComponentInParent<CrabNetworkSync2D>();
+
+        if (crabSync == null && crabPrefab != null)
+            crabSync = crabPrefab.GetComponentInParent<CrabNetworkSync2D>();
+
+        if (crabSync == null)
+            return 0f;
+
+        return crabSync.AppliedTossVerticalSpeed;
     }
 }

@@ -29,6 +29,9 @@ public class CrabPlayerInput : MonoBehaviour
             if (!useNetcodeOwnership || !IsOnlineSessionActive)
                 return true;
 
+            if (NetworkStart.DelayInitialSpawnUntilHostStart && !NetworkStart.IsMatchStarted)
+                return false;
+
             NetworkObject networkObject = GetNetworkObject();
             return networkObject != null && networkObject.IsOwner;
         }

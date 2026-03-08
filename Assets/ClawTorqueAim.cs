@@ -31,6 +31,7 @@ public class ClawTorqueAim : MonoBehaviour
     HingeJoint2D hinge;
     ClawGrab2D grab;
     CrabPlayerInput playerInput;
+    CrabNetworkSync2D networkSync;
 
     Vector2 aimInput;
 
@@ -40,6 +41,7 @@ public class ClawTorqueAim : MonoBehaviour
         hinge = GetComponent<HingeJoint2D>();
         grab = GetComponentInParent<ClawGrab2D>();
         playerInput = GetComponentInParent<CrabPlayerInput>();
+        networkSync = GetComponentInParent<CrabNetworkSync2D>();
     }
 
     void Update()
@@ -63,6 +65,9 @@ public class ClawTorqueAim : MonoBehaviour
     void FixedUpdate()
     {
         if (playerInput != null && !playerInput.HasInputAuthority)
+            return;
+
+        if (networkSync != null && networkSync.IsOwnerInSpawnTossPhase)
             return;
 
         bool isIdleAim = aimInput.sqrMagnitude < 0.05f;

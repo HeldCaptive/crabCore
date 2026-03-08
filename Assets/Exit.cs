@@ -1,10 +1,12 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using Unity.Netcode;
 
 public class Exit : MonoBehaviour
 {
     [SerializeField] float holdDurationSeconds = 5f;
     [SerializeField] bool showHoldProgress = true;
+    [SerializeField] bool disableHoldExitDuringOnlineSession = true;
 
     float escapeHoldTime;
     bool quitTriggered;
@@ -13,6 +15,12 @@ public class Exit : MonoBehaviour
     {
         if (quitTriggered)
             return;
+
+        if (ShouldSuppressHoldExit())
+        {
+            escapeHoldTime = 0f;
+            return;
+        }
 
         if (IsEscapePressed())
         {
@@ -40,6 +48,9 @@ public class Exit : MonoBehaviour
         if (!showHoldProgress)
             return;
 
+        if (ShouldSuppressHoldExit())
+            return;
+
         if (quitTriggered)
             return;
 
@@ -59,5 +70,14 @@ public class Exit : MonoBehaviour
     {
         return Keyboard.current != null
             && Keyboard.current.escapeKey.isPressed;
+    }
+
+    bool ShouldSuppressHoldExit()
+    {
+        if (!disableHoldExitDuringOnlineSession)
+            return false;
+
+        NetworkManager manager = NetworkManager.Singleton;
+        return manager != null && manager.IsListening;
     }
 }

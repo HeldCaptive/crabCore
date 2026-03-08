@@ -330,6 +330,12 @@ public class ClawGrab2D : MonoBehaviour
         if (!showDebugRadius || !Application.isPlaying)
             return;
 
+        if (NetworkStart.DelayInitialSpawnUntilHostStart && !NetworkStart.IsMatchStarted)
+            return;
+
+        if (playerInput != null && !playerInput.HasInputAuthority)
+            return;
+
         // Draw grab radius for left claw
         if (leftClaw != null)
         {
@@ -350,6 +356,12 @@ public class ClawGrab2D : MonoBehaviour
     void OnDrawGizmosSelected()
     {
         if (!showDebugRadius)
+            return;
+
+        if (NetworkStart.DelayInitialSpawnUntilHostStart && !NetworkStart.IsMatchStarted)
+            return;
+
+        if (Application.isPlaying && playerInput != null && !playerInput.HasInputAuthority)
             return;
 
         // Draw grab radius for left claw
