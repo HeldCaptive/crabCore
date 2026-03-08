@@ -1,4 +1,5 @@
 using Unity.Netcode;
+using Unity.Netcode.Components;
 using UnityEngine;
 using System;
 using System.Collections.Generic;
@@ -19,6 +20,7 @@ public class CrabNetworkSync2D : NetworkBehaviour
 
     readonly List<Rigidbody2D> rigidbodies = new List<Rigidbody2D>();
     readonly List<RigidbodyState> lastAppliedStates = new List<RigidbodyState>();
+    NetworkTransform networkTransform;
     bool initialSpawnPositionApplied;
     readonly NetworkList<RigidbodyState> syncedStates = new NetworkList<RigidbodyState>(
         null,
@@ -51,6 +53,11 @@ public class CrabNetworkSync2D : NetworkBehaviour
 
     void Awake()
     {
+        networkTransform = GetComponent<NetworkTransform>();
+
+        if (networkTransform != null && networkTransform.enabled)
+            networkTransform.enabled = false;
+
         ResolveRigidbodies();
     }
 

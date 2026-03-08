@@ -728,8 +728,7 @@ public class NetworkStart : MonoBehaviour
         PrepareClientObstacleActivation();
 
         isBusy = true;
-        isConnectingClient = true;
-        connectStartTime = Time.unscaledTime;
+        isConnectingClient = false;
         connectionStatus = "Joining Relay...";
 
         try
@@ -762,6 +761,8 @@ public class NetworkStart : MonoBehaviour
             }
 
             joinCodeInput = joinCode.ToUpperInvariant();
+            isConnectingClient = true;
+            connectStartTime = Time.unscaledTime;
             connectionStatus = "Trying to connect via Relay...";
         }
         catch (Exception ex)
